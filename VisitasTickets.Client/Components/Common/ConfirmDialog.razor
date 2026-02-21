@@ -1,0 +1,159 @@
+@if (IsVisible)
+{
+    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fadeIn" @onclick="Cancel">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideIn" @onclick:stopPropagation="true">
+            <div class="p-6">
+                <!-- Ícono -->
+                <div class="w-16 h-16 @GetIconBackgroundClass() rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 @GetIconColorClass()" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        @if (Icon == ConfirmDialogIcon.Warning)
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        }
+                        else if (Icon == ConfirmDialogIcon.Danger)
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        }
+                        else if (Icon == ConfirmDialogIcon.Info)
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        }
+                        else if (Icon == ConfirmDialogIcon.Success)
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        }
+                        else if (Icon == ConfirmDialogIcon.Lock)
+                        {
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        }
+                    </svg>
+                </div>
+
+                <!-- Título -->
+                <h3 class="text-xl font-bold text-gray-900 text-center mb-2">@Title</h3>
+
+                <!-- Mensaje -->
+                <p class="text-gray-600 text-center mb-6">@((MarkupString)Message)</p>
+
+                <!-- Botones -->
+                <div class="flex gap-3">
+                    <button @onclick="Cancel"
+                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                        @CancelButtonText
+                    </button>
+                    <button @onclick="Confirm"
+                            class="flex-1 px-4 py-3 @GetConfirmButtonClass() text-white rounded-lg font-medium hover:shadow-lg transition-all">
+                        @ConfirmButtonText
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fadeIn {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .animate-slideIn {
+        animation: slideIn 0.3s ease-out;
+    }
+</style>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirmar acción";
+    [Parameter] public string Message { get; set; } = "¿Está seguro de realizar esta acción?";
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirmar";
+    [Parameter] public string CancelButtonText { get; set; } = "Cancelar";
+    [Parameter] public ConfirmDialogIcon Icon { get; set; } = ConfirmDialogIcon.Warning;
+    [Parameter] public ConfirmDialogType Type { get; set; } = ConfirmDialogType.Warning;
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task Confirm()
+    {
+        await OnConfirm.InvokeAsync();
+    }
+
+    private async Task Cancel()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private string GetIconBackgroundClass()
+    {
+        return Type switch
+        {
+            ConfirmDialogType.Danger => "bg-red-100",
+            ConfirmDialogType.Warning => "bg-yellow-100",
+            ConfirmDialogType.Info => "bg-blue-100",
+            ConfirmDialogType.Success => "bg-green-100",
+            _ => "bg-gray-100"
+        };
+    }
+
+    private string GetIconColorClass()
+    {
+        return Type switch
+        {
+            ConfirmDialogType.Danger => "text-red-600",
+            ConfirmDialogType.Warning => "text-yellow-600",
+            ConfirmDialogType.Info => "text-blue-600",
+            ConfirmDialogType.Success => "text-green-600",
+            _ => "text-gray-600"
+        };
+    }
+
+    private string GetConfirmButtonClass()
+    {
+        return Type switch
+        {
+            ConfirmDialogType.Danger => "bg-gradient-to-r from-red-500 to-red-600",
+            ConfirmDialogType.Warning => "bg-gradient-to-r from-yellow-500 to-yellow-600",
+            ConfirmDialogType.Info => "bg-gradient-to-r from-blue-500 to-blue-600",
+            ConfirmDialogType.Success => "bg-gradient-to-r from-green-500 to-green-600",
+            _ => "bg-gradient-to-r from-gray-500 to-gray-600"
+        };
+    }
+
+    public enum ConfirmDialogType
+    {
+        Danger,
+        Warning,
+        Info,
+        Success
+    }
+
+    public enum ConfirmDialogIcon
+    {
+        Warning,
+        Danger,
+        Info,
+        Success,
+        Lock
+    }
+}

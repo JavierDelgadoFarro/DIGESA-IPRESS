@@ -2,8 +2,12 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @layout MainLayout
 @using VisitasTickets.Client.Services
+@using VisitasTickets.Client.Components.Common
+@using VisitasTickets.Client.Components.Usuarios
 @using VisitasTickets.Domain.Entities
+@using static VisitasTickets.Client.Components.Common.ConfirmDialog
 @inject UsuarioService UsuarioService
+@inject NotificationService NotificationService
 
 <PageTitle>Gestión de Usuarios</PageTitle>
 
@@ -11,41 +15,12 @@
 <div class="max-w-7xl mx-auto space-y-6">
     <!-- Card con Header y Búsqueda -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <!-- 1. HEADER SECTION - Filtro de estado (línea ~28) -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <!-- Buscador -->
-            <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <input type="text"
-                           @bind="searchText"
-                           @bind:event="oninput"
-                           placeholder="Buscar..."
-                           class="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
-                    <svg class="absolute right-3 top-2.5 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Filtro de estado - CORREGIDO -->
-            <div class="mx-4 flex-shrink-0">
-                <select @bind="estadoFiltro" @bind:after="StateHasChanged"
-                        class="min-w-[140px] px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all">
-                    <option value="">Todos</option>
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                </select>
-            </div>
-
-            <!-- Botón Add -->
-            <button @onclick="AbrirModalNuevo"
-                    class="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex-shrink-0">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                Nuevo
-            </button>
-        </div>
+        <!-- Componente de Filtros -->
+        <UsuarioFilters SearchText="@searchText"
+                        EstadoFiltro="@estadoFiltro"
+                        SearchTextChanged="@((value) => { searchText = value; StateHasChanged(); })"
+                        EstadoFiltroChanged="@((value) => { estadoFiltro = value; StateHasChanged(); })"
+                        OnNuevoClick="@AbrirModalNuevo" />
 
         <!-- Tabla -->
         <div class="overflow-x-auto">
@@ -224,191 +199,36 @@
     </div>
 </div>
 
-<!-- Modal Crear/Editar Usuario -->
-@if (mostrarModal)
-{
-    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fadeIn" @onclick="CerrarModal">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slideIn" @onclick:stopPropagation="true">
-            <!-- Header del Modal -->
-            <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-6 py-4 rounded-t-2xl">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-2xl font-bold">@(esEdicion ? "Editar Usuario" : "Nuevo Usuario")</h2>
-                    <button @onclick="CerrarModal" class="p-2 hover:bg-blue-700 rounded-lg transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
+<!-- Componente Modal de Formulario -->
+<UsuarioFormModal IsVisible="@mostrarModal"
+                  IsEditing="@esEdicion"
+                  Usuario="@usuarioEditando"
+                  ErrorMessage="@mensajeError"
+                  OnSave="@GuardarUsuario"
+                  OnClose="@CerrarModal" />
 
-            <!-- Formulario -->
-            <div class="p-6 space-y-6">
-                @if (!string.IsNullOrEmpty(mensajeError))
-                {
-                    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-                        <p class="text-sm text-red-700 font-medium">@mensajeError</p>
-                    </div>
-                }
+<!-- Componente Modal de Confirmación para Eliminar/Activar -->
+<ConfirmDialog IsVisible="@mostrarModalEliminar"
+               Title="@(usuarioEliminar?.EstadoTexto == "Activo" ? "¿Desactivar usuario?" : "¿Activar usuario?")"
+               Message="@GetMensajeEliminar()"
+               Type="@(usuarioEliminar?.EstadoTexto == "Activo" ? ConfirmDialogType.Danger : ConfirmDialogType.Success)"
+               Icon="@(usuarioEliminar?.EstadoTexto == "Activo" ? ConfirmDialogIcon.Warning : ConfirmDialogIcon.Success)"
+               ConfirmButtonText="@(usuarioEliminar?.EstadoTexto == "Activo" ? "Desactivar" : "Activar")"
+               OnConfirm="@EliminarUsuario"
+               OnCancel="@(() => { mostrarModalEliminar = false; usuarioEliminar = null; })" />
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Nombres *</label>
-                        <input type="text"
-                               @bind="usuarioEditando.IdPersonalNavigation.Nombre"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
-                    </div>
+<!-- Componente Modal de Reset de Contraseña -->
+<ConfirmDialog IsVisible="@mostrarModalReset"
+               Title="¿Resetear Contraseña?"
+               Message="@GetMensajeReset()"
+               Type="@ConfirmDialogType.Warning"
+               Icon="@ConfirmDialogIcon.Lock"
+               ConfirmButtonText="Resetear"
+               OnConfirm="@ResetearContrasena"
+               OnCancel="@(() => { mostrarModalReset = false; usuarioReset = null; })" />
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Apellido Paterno *</label>
-                        <input type="text"
-                               @bind="usuarioEditando.IdPersonalNavigation.Paterno"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Apellido Materno *</label>
-                        <input type="text"
-                               @bind="usuarioEditando.IdPersonalNavigation.Materno"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Usuario *</label>
-                        <input type="text"
-                               @bind="usuarioEditando.NombreUsuarioUsu"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
-                    <button @onclick="CerrarModal"
-                            class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-                        Cancelar
-                    </button>
-                    <button @onclick="GuardarUsuario"
-                            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl">
-                        @(esEdicion ? "Actualizar" : "Crear") Usuario
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- Modal Confirmar Eliminación -->
-@if (mostrarModalEliminar)
-{
-    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideIn">
-            <div class="p-6">
-                <div class="w-16 h-16 @(usuarioEliminar?.EstadoTexto == "Activo" ? "bg-red-100" : "bg-green-100") rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 @(usuarioEliminar?.EstadoTexto == "Activo" ? "text-red-600" : "text-green-600")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                    </svg>
-                </div>
-                <h3 class="text-xl font-bold text-gray-900 text-center mb-2">¿Cambiar estado del usuario?</h3>
-                <p class="text-gray-600 text-center mb-6">
-                    ¿Estás seguro de que deseas @(usuarioEliminar?.EstadoTexto == "Activo" ? "desactivar" : "activar") a
-                    <span class="font-semibold">@usuarioEliminar?.NombreUsuarioUsu</span>?
-                </p>
-                <div class="flex gap-3">
-                    <button @onclick="() => mostrarModalEliminar = false"
-                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-                        Cancelar
-                    </button>
-                    <button @onclick="EliminarUsuario"
-                            class="flex-1 px-4 py-3 @(usuarioEliminar?.EstadoTexto == "Activo" ? "bg-gradient-to-r from-red-500 to-red-600" : "bg-gradient-to-r from-green-500 to-green-600") text-white rounded-lg font-medium hover:shadow-lg transition-all">
-                        @(usuarioEliminar?.EstadoTexto == "Activo" ? "Desactivar" : "Activar")
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- Modal Reset Contraseña -->
-@if (mostrarModalReset)
-{
-    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 animate-fadeIn">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideIn">
-            <div class="p-6">
-                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                    </svg>
-                </div>
-                <h3 class="text-xl font-bold text-gray-900 text-center mb-2">¿Resetear Contraseña?</h3>
-                <p class="text-gray-600 text-center mb-6">
-                    ¿Estás seguro de que deseas resetear la contraseña de
-                    <span class="font-semibold">@usuarioReset?.NombreUsuarioUsu</span>?
-                    <br />
-                    Se asignará la contraseña por defecto.
-                </p>
-                <div class="flex gap-3">
-                    <button @onclick="() => mostrarModalReset = false"
-                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
-                        Cancelar
-                    </button>
-                    <button @onclick="ResetearContrasena"
-                            class="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg font-medium hover:shadow-lg transition-all">
-                        Resetear
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- Toast Notifications -->
-@if (mostrarToast)
-{
-    <div class="fixed bottom-4 right-4 @toastColor text-white px-6 py-4 rounded-lg shadow-2xl transition-all duration-500 flex items-center gap-3 animate-slideIn">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            @if (toastColor == "bg-green-600")
-            {
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            }
-            else
-            {
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            }
-        </svg>
-        <span class="font-medium">@mensajeToast</span>
-    </div>
-}
-
-<!-- Estilos CSS -->
-<style>
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-
-    @@keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .animate-fadeIn {
-        animation: fadeIn 0.3s ease-out;
-    }
-
-    .animate-slideIn {
-        animation: slideIn 0.3s ease-out;
-    }
-</style>
+<!-- Componente Toast -->
+<Toast />
 
 @code {
     private List<UsuarioModel> usuariosTodos = new();
@@ -420,10 +240,6 @@
     private string mensajeError = "";
     private bool mostrarModalReset = false;
     private UsuarioModel? usuarioReset;
-
-    private bool mostrarToast = false;
-    private string mensajeToast = "";
-    private string toastColor = "bg-green-600";
 
     private string searchText = "";
     private string estadoFiltro = "";
@@ -504,22 +320,13 @@
         {
             usuariosTodos = await UsuarioService.GetUsuariosAsync();
             CerrarModal();
-
-            mensajeToast = esEdicion ? "Usuario actualizado correctamente." : "Usuario creado correctamente.";
-            toastColor = "bg-green-600";
+            NotificationService.ShowSuccess(esEdicion ? "Usuario actualizado correctamente." : "Usuario creado correctamente.");
         }
         else
         {
             mensajeError = "Error al guardar el usuario.";
-            mensajeToast = "Error al guardar el usuario.";
-            toastColor = "bg-red-600";
+            NotificationService.ShowError("Error al guardar el usuario.");
         }
-
-        mostrarToast = true;
-        StateHasChanged();
-        await Task.Delay(3000);
-        mostrarToast = false;
-        StateHasChanged();
     }
 
     private void ConfirmarEliminar(UsuarioModel usuarioDto)
@@ -536,7 +343,6 @@
             if (ok)
             {
                 usuariosTodos = await UsuarioService.GetUsuariosAsync();
-
                 var actualizado = usuariosTodos.FirstOrDefault(u => u.IdUsuario == usuarioEliminar.IdUsuario);
 
                 mostrarModalEliminar = false;
@@ -544,27 +350,22 @@
 
                 if (actualizado != null)
                 {
-                    mensajeToast = actualizado.EstadoTexto == "Activo"
+                    var mensaje = actualizado.EstadoTexto == "Activo"
                         ? $"Usuario {actualizado.NombreUsuarioUsu} activado correctamente."
                         : $"Usuario {actualizado.NombreUsuarioUsu} desactivado correctamente.";
 
-                    toastColor = actualizado.EstadoTexto == "Activo" ? "bg-green-600" : "bg-red-600";
+                    if (actualizado.EstadoTexto == "Activo")
+                        NotificationService.ShowSuccess(mensaje);
+                    else
+                        NotificationService.ShowError(mensaje);
                 }
             }
             else
             {
                 mostrarModalEliminar = false;
                 usuarioEliminar = null;
-
-                mensajeToast = "Error al cambiar estado del usuario.";
-                toastColor = "bg-red-600";
+                NotificationService.ShowError("Error al cambiar estado del usuario.");
             }
-
-            mostrarToast = true;
-            StateHasChanged();
-            await Task.Delay(3000);
-            mostrarToast = false;
-            StateHasChanged();
         }
     }
 
@@ -582,24 +383,15 @@
             if (ok)
             {
                 usuariosTodos = await UsuarioService.GetUsuariosAsync();
-
-                mensajeToast = $"Contraseña de {usuarioReset.NombreUsuarioUsu} reseteada correctamente.";
-                toastColor = "bg-green-600";
+                NotificationService.ShowSuccess($"Contraseña de {usuarioReset.NombreUsuarioUsu} reseteada correctamente.");
             }
             else
             {
-                mensajeToast = "Error al resetear la contraseña.";
-                toastColor = "bg-red-600";
+                NotificationService.ShowError("Error al resetear la contraseña.");
             }
 
             mostrarModalReset = false;
             usuarioReset = null;
-
-            mostrarToast = true;
-            StateHasChanged();
-            await Task.Delay(3000);
-            mostrarToast = false;
-            StateHasChanged();
         }
     }
 
@@ -637,5 +429,18 @@
         var colors = new[] { "bg-blue-500", "bg-green-500", "bg-purple-500", "bg-pink-500", "bg-indigo-500", "bg-red-500" };
         var index = Math.Abs(nombre.GetHashCode()) % colors.Length;
         return colors[index];
+    }
+
+    private string GetMensajeEliminar()
+    {
+        if (usuarioEliminar == null) return "";
+        var accion = usuarioEliminar.EstadoTexto == "Activo" ? "desactivar" : "activar";
+        return $"¿Estás seguro de que deseas <strong>{accion}</strong> a <strong>{usuarioEliminar.NombreUsuarioUsu}</strong>?";
+    }
+
+    private string GetMensajeReset()
+    {
+        if (usuarioReset == null) return "";
+        return $"¿Estás seguro de que deseas resetear la contraseña de <strong>{usuarioReset.NombreUsuarioUsu}</strong>?<br/>Se asignará la contraseña por defecto.";
     }
 }

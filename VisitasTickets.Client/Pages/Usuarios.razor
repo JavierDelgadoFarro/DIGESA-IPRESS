@@ -6,6 +6,7 @@
 @using VisitasTickets.Client.Components.Usuarios
 @using VisitasTickets.Domain.Entities
 @using static VisitasTickets.Client.Components.Common.ConfirmDialog
+@using VisitasTickets.Domain.Dtos
 @inject UsuarioService UsuarioService
 @inject NotificationService NotificationService
 
@@ -13,6 +14,14 @@
 
 <!-- Container Principal con diseño limpio -->
 <div class="max-w-7xl mx-auto space-y-6">
+    <!-- Título de la Página -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Usuarios</h1>
+            <p class="text-sm text-gray-500 mt-1">Administra los usuarios del sistema</p>
+        </div>
+    </div>
+
     <!-- Card con Header y Búsqueda -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <!-- Componente de Filtros -->
@@ -202,7 +211,13 @@
 <!-- Componente Modal de Formulario -->
 <UsuarioFormModal IsVisible="@mostrarModal"
                   IsEditing="@esEdicion"
-                  Usuario="@usuarioEditando"
+                  IdUsuario="@idUsuarioEditar"
+                  @bind-NombreUsuario="@nombreUsuario"
+                  @bind-Nombre="@nombre"
+                  @bind-Paterno="@paterno"
+                  @bind-Materno="@materno"
+                  MenusDisponibles="@menusDisponibles"
+                  SubMenusSeleccionados="@subMenusSeleccionados"
                   ErrorMessage="@mensajeError"
                   OnSave="@GuardarUsuario"
                   OnClose="@CerrarModal" />
@@ -232,9 +247,15 @@
 
 @code {
     private List<UsuarioModel> usuariosTodos = new();
+    private List<MenuDto> menusDisponibles = new();
     private bool mostrarModal = false;
     private bool esEdicion = false;
-    private AdmUsuario usuarioEditando = new() { IdPersonalNavigation = new AdmPersonal() };
+    private int idUsuarioEditar = 0;
+    private string nombreUsuario = "";
+    private string nombre = "";
+    private string paterno = "";
+    private string materno = "";
+    private List<int> subMenusSeleccionados = new();
     private bool mostrarModalEliminar = false;
     private UsuarioModel? usuarioEliminar;
     private string mensajeError = "";
@@ -249,15 +270,19 @@
     protected override async Task OnInitializedAsync()
     {
         usuariosTodos = await UsuarioService.GetUsuariosAsync();
+        menusDisponibles = await UsuarioService.GetMenusDisponiblesAsync();
     }
 
     private void AbrirModalNuevo()
     {
         esEdicion = false;
-        usuarioEditando = new AdmUsuario
-        {
-            IdPersonalNavigation = new AdmPersonal()
-        };
+        idUsuarioEditar = 0;
+        nombreUsuario = "";
+        nombre = "";
+        paterno = "";
+        materno = "";
+        subMenusSeleccionados = new();
+        mensajeError = "";
         mostrarModal = true;
     }
 
@@ -267,19 +292,14 @@
 
         if (dto != null)
         {
-            usuarioEditando = new AdmUsuario
-            {
-                IdUsuario = dto.IdUsuario,
-                NombreUsuarioUsu = dto.NombreUsuarioUsu,
-                IdPersonalNavigation = new AdmPersonal
-                {
-                    Paterno = dto.Paterno,
-                    Materno = dto.Materno,
-                    Nombre = dto.Nombre
-                }
-            };
-
             esEdicion = true;
+            idUsuarioEditar = dto.IdUsuario;
+            nombreUsuario = dto.NombreUsuarioUsu ?? "";
+            nombre = dto.Nombre ?? "";
+            paterno = dto.Paterno ?? "";
+            materno = dto.Materno ?? "";
+            subMenusSeleccionados = new List<int>(dto.SubMenusSeleccionados);
+            mensajeError = "";
             mostrarModal = true;
         }
     }
@@ -287,10 +307,12 @@
     private void CerrarModal()
     {
         mostrarModal = false;
-        usuarioEditando = new AdmUsuario
-        {
-            IdPersonalNavigation = new AdmPersonal()
-        };
+        idUsuarioEditar = 0;
+        nombreUsuario = "";
+        nombre = "";
+        paterno = "";
+        materno = "";
+        subMenusSeleccionados = new();
         mensajeError = "";
     }
 
@@ -298,23 +320,31 @@
     {
         mensajeError = "";
 
-        if (string.IsNullOrWhiteSpace(usuarioEditando.NombreUsuarioUsu))
+        if (string.IsNullOrWhiteSpace(nombreUsuario))
         {
             mensajeError = "El nombre de usuario es obligatorio.";
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(usuarioEditando.IdPersonalNavigation?.Paterno) ||
-            string.IsNullOrWhiteSpace(usuarioEditando.IdPersonalNavigation?.Materno) ||
-            string.IsNullOrWhiteSpace(usuarioEditando.IdPersonalNavigation?.Nombre))
+        if (string.IsNullOrWhiteSpace(paterno) || string.IsNullOrWhiteSpace(materno) || string.IsNullOrWhiteSpace(nombre))
         {
             mensajeError = "Debe ingresar Apellido paterno, Apellido materno y Nombre del personal.";
             return;
         }
 
+        var dto = new UsuarioEdicionDto
+        {
+            IdUsuario = idUsuarioEditar,
+            NombreUsuarioUsu = nombreUsuario,
+            Nombre = nombre,
+            Paterno = paterno,
+            Materno = materno,
+            SubMenusSeleccionados = subMenusSeleccionados
+        };
+
         bool ok = esEdicion
-            ? await UsuarioService.UpdateUsuarioAsync(usuarioEditando.IdUsuario, usuarioEditando)
-            : await UsuarioService.CreateUsuarioAsync(usuarioEditando);
+            ? await UsuarioService.UpdateUsuarioAsync(idUsuarioEditar, dto)
+            : await UsuarioService.CreateUsuarioAsync(dto);
 
         if (ok)
         {

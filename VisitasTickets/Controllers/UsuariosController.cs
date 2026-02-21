@@ -60,9 +60,12 @@ namespace VisitasTickets.API.Controllers
         {
             var usuario = await _context.AdmUsuarios
                 .Include(u => u.IdPersonalNavigation)
+                .Include(u => u.AdmDetalleSubMenus)
                 .FirstOrDefaultAsync(u => u.IdUsuario == id && u.IdArea == AppConfig.DefaultAreaId);
 
             if (usuario == null) return NotFound();
+
+            var subMenusIds = usuario.AdmDetalleSubMenus.Select(d => d.IdSmenu ?? 0).ToList();
 
             return new UsuarioEdicionDto
             {
@@ -70,80 +73,147 @@ namespace VisitasTickets.API.Controllers
                 NombreUsuarioUsu = usuario.NombreUsuarioUsu,
                 Paterno = usuario.IdPersonalNavigation?.Paterno,
                 Materno = usuario.IdPersonalNavigation?.Materno,
-                Nombre = usuario.IdPersonalNavigation?.Nombre
+                Nombre = usuario.IdPersonalNavigation?.Nombre,
+                SubMenusSeleccionados = subMenusIds
             };
+        }
+
+        [HttpGet("menus-disponibles")]
+        public async Task<ActionResult<IEnumerable<MenuDto>>> GetMenusDisponibles()
+        {
+            var menus = await _context.AdmMenus
+                .Include(m => m.AdmSubMenus.Where(sm => sm.IdEstado == 1))
+                .Where(m => m.IdEstado == 1 && m.IdModulo == AppConfig.DefaultModuloId)
+                .OrderBy(m => m.OrdenMen)
+                .Select(m => new MenuDto
+                {
+                    IdMenu = m.IdMenu,
+                    NombreMenu = m.DescripcionMen ?? "",
+                    SubMenus = m.AdmSubMenus
+                        .OrderBy(sm => sm.OrdenSme)
+                        .Select(sm => new SubMenuDto
+                        {
+                            IdSubMenu = sm.IdSmenu,
+                            NombreSubMenu = sm.DescripcionSme ?? "",
+                            Ruta = sm.RutaWebSme
+                        }).ToList()
+                })
+                .ToListAsync();
+
+            return menus;
         }
 
         [HttpPost]
-        public async Task<ActionResult<UsuarioDto>> CreateUsuario(AdmUsuario usuario)
+        public async Task<ActionResult<UsuarioDto>> CreateUsuario(UsuarioEdicionDto dto)
         {
-            usuario.IdArea = AppConfig.DefaultAreaId;
-            usuario.IdSede = 1;
-            usuario.IdEstado = 1;
-            usuario.ContrasenaUsu = usuario.NombreUsuarioUsu;
-
-            if (usuario.IdPersonalNavigation != null)
+            var usuario = new AdmUsuario
             {
-                var personal = usuario.IdPersonalNavigation;
+                NombreUsuarioUsu = dto.NombreUsuarioUsu,
+                IdArea = AppConfig.DefaultAreaId,
+                IdSede = 1,
+                IdEstado = 1,
+                ContrasenaUsu = dto.NombreUsuarioUsu
+            };
 
-                var maxId = await _context.AdmPersonals.MaxAsync(p => (int?)p.IdPersonal) ?? 0;
-                personal.IdPersonal = maxId + 1;
+            // Crear personal
+            var maxId = await _context.AdmPersonals.MaxAsync(p => (int?)p.IdPersonal) ?? 0;
+            var personal = new AdmPersonal
+            {
+                IdPersonal = maxId + 1,
+                Nombre = dto.Nombre,
+                Paterno = dto.Paterno,
+                Materno = dto.Materno,
+                ApellidosNombrePer = $"{dto.Nombre} {dto.Paterno} {dto.Materno} ".Trim(),
+                IdArea = AppConfig.DefaultAreaId,
+                IdProfesion = AppConfig.DefaultProfesionId,
+                IdCargo = AppConfig.DefaultCargoId,
+                IdEstado = 1
+            };
 
-                personal.ApellidosNombrePer = $"{personal.Nombre} {personal.Paterno} {personal.Materno}".Trim();
-                personal.IdArea = AppConfig.DefaultAreaId;
-                personal.IdProfesion = AppConfig.DefaultProfesionId;
-                personal.IdCargo = AppConfig.DefaultCargoId;
-                personal.IdEstado = 1;
+            _context.AdmPersonals.Add(personal);
+            await _context.SaveChangesAsync();
 
-                _context.AdmPersonals.Add(personal);
-                await _context.SaveChangesAsync();
-
-                usuario.IdPersonal = personal.IdPersonal;
-            }
-
+            usuario.IdPersonal = personal.IdPersonal;
             _context.AdmUsuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            var dto = new UsuarioDto
+            // Asignar permisos (SubMenus)
+            if (dto.SubMenusSeleccionados != null && dto.SubMenusSeleccionados.Any())
+            {
+                var maxIdDetalle = await _context.AdmDetalleSubMenus.MaxAsync(d => (int?)d.IdDsubmenu) ?? 0;
+                var detalles = dto.SubMenusSeleccionados.Select((subMenuId, index) => new AdmDetalleSubMenu
+                {
+                    IdDsubmenu = maxIdDetalle + index + 1,
+                    IdSmenu = subMenuId,
+                    IdUsuario = usuario.IdUsuario
+                }).ToList();
+
+                _context.AdmDetalleSubMenus.AddRange(detalles);
+                await _context.SaveChangesAsync();
+            }
+
+            var result = new UsuarioDto
             {
                 IdUsuario = usuario.IdUsuario,
                 NombreUsuarioUsu = usuario.NombreUsuarioUsu,
-                ApellidosNombrePer = usuario.IdPersonalNavigation?.ApellidosNombrePer
+                ApellidosNombrePer = personal.ApellidosNombrePer
             };
 
-            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.IdUsuario }, dto);
+            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.IdUsuario }, result);
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<UsuarioDto>> UpdateUsuario(int id, AdmUsuario usuario)
+        public async Task<ActionResult<UsuarioDto>> UpdateUsuario(int id, UsuarioEdicionDto dto)
         {
             var existente = await _context.AdmUsuarios
                 .Include(u => u.IdPersonalNavigation)
+                .Include(u => u.AdmDetalleSubMenus)
                 .FirstOrDefaultAsync(u => u.IdUsuario == id && u.IdArea == AppConfig.DefaultAreaId);
 
             if (existente == null) return NotFound();
 
-            existente.NombreUsuarioUsu = usuario.NombreUsuarioUsu;
+            existente.NombreUsuarioUsu = dto.NombreUsuarioUsu;
 
-            if (existente.IdPersonalNavigation != null && usuario.IdPersonalNavigation != null)
+            if (existente.IdPersonalNavigation != null)
             {
                 var personal = existente.IdPersonalNavigation;
-                personal.Paterno = usuario.IdPersonalNavigation.Paterno;
-                personal.Materno = usuario.IdPersonalNavigation.Materno;
-                personal.Nombre = usuario.IdPersonalNavigation.Nombre;
-                personal.ApellidosNombrePer = $"{personal.Paterno} {personal.Materno} {personal.Nombre}".Trim();
+                personal.Paterno = dto.Paterno;
+                personal.Materno = dto.Materno;
+                personal.Nombre = dto.Nombre;
+                personal.ApellidosNombrePer = $"{dto.Paterno} {dto.Materno} {dto.Nombre}".Trim();
+            }
+
+            // Actualizar permisos (SubMenus)
+            // 1. Eliminar permisos existentes
+            if (existente.AdmDetalleSubMenus.Any())
+            {
+                _context.AdmDetalleSubMenus.RemoveRange(existente.AdmDetalleSubMenus);
+            }
+
+            // 2. Agregar nuevos permisos
+            if (dto.SubMenusSeleccionados != null && dto.SubMenusSeleccionados.Any())
+            {
+                var maxIdDetalle = await _context.AdmDetalleSubMenus.MaxAsync(d => (int?)d.IdDsubmenu) ?? 0;
+                var detalles = dto.SubMenusSeleccionados.Select((subMenuId, index) => new AdmDetalleSubMenu
+                {
+                    IdDsubmenu = maxIdDetalle + index + 1,
+                    IdSmenu = subMenuId,
+                    IdUsuario = existente.IdUsuario
+                }).ToList();
+
+                _context.AdmDetalleSubMenus.AddRange(detalles);
             }
 
             await _context.SaveChangesAsync();
 
-            var dto = new UsuarioDto
+            var result = new UsuarioDto
             {
                 IdUsuario = existente.IdUsuario,
                 NombreUsuarioUsu = existente.NombreUsuarioUsu,
                 ApellidosNombrePer = existente.IdPersonalNavigation?.ApellidosNombrePer
             };
 
-            return dto;
+            return result;
         }
 
         [HttpDelete("{id}")]

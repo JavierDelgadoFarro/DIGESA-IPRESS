@@ -31,13 +31,18 @@ namespace VisitasTickets.Client.Services
             return await _http.GetFromJsonAsync<UsuarioEdicionDto>($"api/usuarios/{id}/completo");
         }
 
-        public async Task<bool> CreateUsuarioAsync(AdmUsuario usuario)
+        public async Task<List<MenuDto>> GetMenusDisponiblesAsync()
+        {
+            return await _http.GetFromJsonAsync<List<MenuDto>>("api/usuarios/menus-disponibles") ?? new List<MenuDto>();
+        }
+
+        public async Task<bool> CreateUsuarioAsync(UsuarioEdicionDto usuario)
         {
             var response = await _http.PostAsJsonAsync("api/usuarios", usuario);
             return response.IsSuccessStatusCode;
         }
 
-        public async Task<bool> UpdateUsuarioAsync(int id, AdmUsuario usuario)
+        public async Task<bool> UpdateUsuarioAsync(int id, UsuarioEdicionDto usuario)
         {
             var response = await _http.PutAsJsonAsync($"api/usuarios/{id}", usuario);
             return response.IsSuccessStatusCode;

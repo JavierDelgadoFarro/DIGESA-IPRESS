@@ -6,5 +6,6 @@
         public const int DefaultProfesionId = 2;
         public const int DefaultCargoId = 15;
         public const int DefaultEstadoId = 1;
+        public const int DefaultModuloId = 27;
     }
 }

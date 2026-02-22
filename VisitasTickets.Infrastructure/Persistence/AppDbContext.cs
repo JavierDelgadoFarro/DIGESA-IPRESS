@@ -28,6 +28,15 @@ namespace VisitasTickets.Infrastructure.Persistence
 
         public virtual DbSet<AdmUsuario> AdmUsuarios { get; set; }
 
+        // Atenciones
+        public virtual DbSet<UtdAtencion> UtdAtencions { get; set; }
+
+        public virtual DbSet<UtdEstadoAtencion> UtdEstadoAtencions { get; set; }
+
+        public virtual DbSet<UtdTipoTramite> UtdTipoTramites { get; set; }
+
+        public virtual DbSet<UtdTipoPreferencial> UtdTipoPreferencials { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AdmArea>(entity =>
@@ -287,6 +296,147 @@ namespace VisitasTickets.Infrastructure.Persistence
                 entity.HasOne(d => d.IdPersonalNavigation).WithMany(p => p.AdmUsuarios)
                     .HasForeignKey(d => d.IdPersonal)
                     .HasConstraintName("FK_Usuario_Personal");
+            });
+
+            // Configuración de Atenciones
+            modelBuilder.Entity<UtdEstadoAtencion>(entity =>
+            {
+                entity.HasKey(e => e.IdEstadoAtencion);
+
+                entity.ToTable("UTD_ESTADO_ATENCION");
+
+                entity.Property(e => e.IdEstadoAtencion).HasColumnName("ID_ESTADO_ATENCION");
+                entity.Property(e => e.NombreEstado)
+                    .HasMaxLength(50)
+                    .IsUnicode(false)
+                    .HasColumnName("NOMBRE_ESTADO");
+                entity.Property(e => e.Orden).HasColumnName("ORDEN");
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(200)
+                    .IsUnicode(false)
+                    .HasColumnName("DESCRIPCION");
+                entity.Property(e => e.Estado).HasColumnName("ESTADO");
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_CREACION");
+            });
+
+            modelBuilder.Entity<UtdTipoTramite>(entity =>
+            {
+                entity.HasKey(e => e.IdTipoTramite);
+
+                entity.ToTable("UTD_TIPO_TRAMITE");
+
+                entity.Property(e => e.IdTipoTramite).HasColumnName("ID_TIPO_TRAMITE");
+                entity.Property(e => e.NombreTramite)
+                    .HasMaxLength(100)
+                    .IsUnicode(false)
+                    .HasColumnName("NOMBRE_TRAMITE");
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(500)
+                    .IsUnicode(false)
+                    .HasColumnName("DESCRIPCION");
+                entity.Property(e => e.Estado).HasColumnName("ESTADO");
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_CREACION");
+            });
+
+            modelBuilder.Entity<UtdTipoPreferencial>(entity =>
+            {
+                entity.HasKey(e => e.IdTipoPreferencial);
+
+                entity.ToTable("UTD_TIPO_PREFERENCIAL");
+
+                entity.Property(e => e.IdTipoPreferencial).HasColumnName("ID_TIPO_PREFERENCIAL");
+                entity.Property(e => e.NombreTipoPreferencial)
+                    .HasMaxLength(100)
+                    .IsUnicode(false)
+                    .HasColumnName("NOMBRE_TIPO_PREFERENCIAL");
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(200)
+                    .IsUnicode(false)
+                    .HasColumnName("DESCRIPCION");
+                entity.Property(e => e.Estado).HasColumnName("ESTADO");
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_CREACION");
+            });
+
+            modelBuilder.Entity<UtdAtencion>(entity =>
+            {
+                entity.HasKey(e => e.IdAtencion);
+
+                entity.ToTable("UTD_ATENCIONES");
+
+                entity.HasIndex(e => e.IdEstadoAtencion, "IX_Atenciones_Estado");
+                entity.HasIndex(e => e.FechaRegistro, "IX_Atenciones_FechaRegistro");
+                entity.HasIndex(e => e.NumeroDocumento, "IX_Atenciones_NumeroDocumento");
+                entity.HasIndex(e => e.IdTipoTramite, "IX_Atenciones_TipoTramite");
+
+                entity.Property(e => e.IdAtencion).HasColumnName("ID_ATENCION");
+                entity.Property(e => e.TipoDocumento)
+                    .HasMaxLength(10)
+                    .IsUnicode(false)
+                    .HasColumnName("TIPO_DOCUMENTO");
+                entity.Property(e => e.NumeroDocumento)
+                    .HasMaxLength(20)
+                    .IsUnicode(false)
+                    .HasColumnName("NUMERO_DOCUMENTO");
+                entity.Property(e => e.Nombres)
+                    .HasMaxLength(150)
+                    .IsUnicode(false)
+                    .HasColumnName("NOMBRES");
+                entity.Property(e => e.Apellidos)
+                    .HasMaxLength(150)
+                    .IsUnicode(false)
+                    .HasColumnName("APELLIDOS");
+                entity.Property(e => e.IdTipoTramite).HasColumnName("ID_TIPO_TRAMITE");
+                entity.Property(e => e.Observacion)
+                    .HasMaxLength(500)
+                    .IsUnicode(false)
+                    .HasColumnName("OBSERVACION");
+                entity.Property(e => e.ObservacionAtencion)
+                    .HasMaxLength(1000)
+                    .IsUnicode(false)
+                    .HasColumnName("OBSERVACION_ATENCION");
+                entity.Property(e => e.EsPreferencial).HasColumnName("ES_PREFERENCIAL");
+                entity.Property(e => e.IdTipoPreferencial).HasColumnName("ID_TIPO_PREFERENCIAL");
+                entity.Property(e => e.IdEstadoAtencion).HasColumnName("ID_ESTADO_ATENCION");
+                entity.Property(e => e.FechaRegistro)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_REGISTRO");
+                entity.Property(e => e.FechaActualizacion)
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_ACTUALIZACION");
+                entity.Property(e => e.IdUsuarioRegistro).HasColumnName("ID_USUARIO_REGISTRO");
+                entity.Property(e => e.IdUsuarioActualiza).HasColumnName("ID_USUARIO_ACTUALIZA");
+
+                entity.HasOne(d => d.IdTipoTramiteNavigation).WithMany(p => p.UtdAtencions)
+                    .HasForeignKey(d => d.IdTipoTramite)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Atenciones_TipoTramite");
+
+                entity.HasOne(d => d.IdTipoPreferencialNavigation).WithMany(p => p.UtdAtencions)
+                    .HasForeignKey(d => d.IdTipoPreferencial)
+                    .HasConstraintName("FK_Atenciones_TipoPreferencial");
+
+                entity.HasOne(d => d.IdEstadoAtencionNavigation).WithMany(p => p.UtdAtencions)
+                    .HasForeignKey(d => d.IdEstadoAtencion)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_Atenciones_EstadoAtencion");
+
+                entity.HasOne(d => d.IdUsuarioRegistroNavigation).WithMany()
+                    .HasForeignKey(d => d.IdUsuarioRegistro)
+                    .HasConstraintName("FK_Atenciones_UsuarioRegistro");
+
+                entity.HasOne(d => d.IdUsuarioActualizaNavigation).WithMany()
+                    .HasForeignKey(d => d.IdUsuarioActualiza)
+                    .HasConstraintName("FK_Atenciones_UsuarioActualiza");
             });
 
             OnModelCreatingPartial(modelBuilder);

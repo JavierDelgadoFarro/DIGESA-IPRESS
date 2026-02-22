@@ -1,0 +1,119 @@
+@if (IsVisible)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+            
+            <!-- Header -->
+            <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-lg flex-shrink-0">
+                <h2 class="text-2xl font-bold">@Titulo</h2>
+                @if (!string.IsNullOrWhiteSpace(NombrePersona))
+                {
+                    <p class="text-sm opacity-90 mt-1">@NombrePersona</p>
+                }
+            </div>
+
+            <!-- Body -->
+            <div class="p-6 flex-grow overflow-y-auto">
+                
+                @if (!string.IsNullOrWhiteSpace(DescripcionTramite))
+                {
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p class="text-sm font-semibold text-blue-800 mb-1">Trámite:</p>
+                        <p class="text-sm text-blue-700">@DescripcionTramite</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(ObservacionInicial))
+                {
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Observación Inicial:
+                        </label>
+                        <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <p class="text-sm text-gray-700 whitespace-pre-line">@ObservacionInicial</p>
+                        </div>
+                    </div>
+                }
+
+                <div class="mb-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        @TituloObservacion <span class="text-red-500">*</span>
+                    </label>
+                    <textarea @bind="observacion"
+                              @oninput="OnObservacionInput"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                              rows="6"
+                              maxlength="1000"
+                              placeholder="@Placeholder"></textarea>
+                    <div class="flex justify-between mt-1">
+                        <p class="text-xs text-gray-500">@caracteresRestantes caracteres restantes</p>
+                        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+                        {
+                            <p class="text-xs text-red-600 font-medium">@ErrorMessage</p>
+                        }
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3 flex-shrink-0">
+                <button type="button"
+                        @onclick="HandleClose"
+                        class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                    Cancelar
+                </button>
+                <button type="button"
+                        @onclick="HandleConfirm"
+                        class="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg hover:from-blue-700 hover:to-blue-900 transition-all shadow-md font-medium">
+                    @TextoBotonConfirmar
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Titulo { get; set; } = "Atender Persona";
+    [Parameter] public string TituloObservacion { get; set; } = "Observación de Atención";
+    [Parameter] public string Placeholder { get; set; } = "Ingrese detalles de la atención...";
+    [Parameter] public string TextoBotonConfirmar { get; set; } = "Confirmar";
+    [Parameter] public string? NombrePersona { get; set; }
+    [Parameter] public string? DescripcionTramite { get; set; }
+    [Parameter] public string? ObservacionInicial { get; set; }
+    [Parameter] public string Observacion { get; set; } = "";
+    [Parameter] public EventCallback<string> ObservacionChanged { get; set; }
+    [Parameter] public string ErrorMessage { get; set; } = "";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string observacion = "";
+    private int caracteresRestantes => 1000 - (observacion?.Length ?? 0);
+
+    protected override void OnParametersSet()
+    {
+        observacion = Observacion ?? "";
+    }
+
+    private async Task OnObservacionInput(ChangeEventArgs e)
+    {
+        observacion = e.Value?.ToString() ?? "";
+        await ObservacionChanged.InvokeAsync(observacion);
+    }
+
+    private async Task HandleConfirm()
+    {
+        if (string.IsNullOrWhiteSpace(observacion))
+        {
+            return; // El componente padre manejará la validación
+        }
+        await OnConfirm.InvokeAsync();
+    }
+
+    private async Task HandleClose()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

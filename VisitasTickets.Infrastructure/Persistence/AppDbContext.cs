@@ -31,6 +31,8 @@ namespace VisitasTickets.Infrastructure.Persistence
         // Atenciones
         public virtual DbSet<UtdAtencion> UtdAtencions { get; set; }
 
+        public virtual DbSet<UtdHistorialAtencion> UtdHistorialAtencions { get; set; }
+
         public virtual DbSet<UtdEstadoAtencion> UtdEstadoAtencions { get; set; }
 
         public virtual DbSet<UtdTipoTramite> UtdTipoTramites { get; set; }
@@ -437,6 +439,49 @@ namespace VisitasTickets.Infrastructure.Persistence
                 entity.HasOne(d => d.IdUsuarioActualizaNavigation).WithMany()
                     .HasForeignKey(d => d.IdUsuarioActualiza)
                     .HasConstraintName("FK_Atenciones_UsuarioActualiza");
+            });
+
+            modelBuilder.Entity<UtdHistorialAtencion>(entity =>
+            {
+                entity.HasKey(e => e.IdHistorial);
+
+                entity.ToTable("UTD_HISTORIAL_ATENCIONES");
+
+                entity.HasIndex(e => new { e.IdAtencion, e.FechaCambio }, "IX_HISTORIAL_ATENCION");
+                entity.HasIndex(e => new { e.IdEstadoNuevo, e.FechaCambio }, "IX_HISTORIAL_ESTADO");
+
+                entity.Property(e => e.IdHistorial).HasColumnName("ID_HISTORIAL");
+                entity.Property(e => e.IdAtencion).HasColumnName("ID_ATENCION");
+                entity.Property(e => e.IdEstadoAnterior).HasColumnName("ID_ESTADO_ANTERIOR");
+                entity.Property(e => e.IdEstadoNuevo).HasColumnName("ID_ESTADO_NUEVO");
+                entity.Property(e => e.IdUsuario).HasColumnName("ID_USUARIO");
+                entity.Property(e => e.FechaCambio)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_CAMBIO");
+                entity.Property(e => e.Observacion)
+                    .HasMaxLength(1000)
+                    .IsUnicode(false)
+                    .HasColumnName("OBSERVACION");
+                entity.Property(e => e.TiempoEnEstadoAnterior).HasColumnName("TIEMPO_EN_ESTADO_ANTERIOR");
+
+                entity.HasOne(d => d.IdAtencionNavigation).WithMany()
+                    .HasForeignKey(d => d.IdAtencion)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_HISTORIAL_ATENCION");
+
+                entity.HasOne(d => d.IdEstadoAnteriorNavigation).WithMany()
+                    .HasForeignKey(d => d.IdEstadoAnterior)
+                    .HasConstraintName("FK_HISTORIAL_ESTADO_ANTERIOR");
+
+                entity.HasOne(d => d.IdEstadoNuevoNavigation).WithMany()
+                    .HasForeignKey(d => d.IdEstadoNuevo)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_HISTORIAL_ESTADO_NUEVO");
+
+                entity.HasOne(d => d.IdUsuarioNavigation).WithMany()
+                    .HasForeignKey(d => d.IdUsuario)
+                    .HasConstraintName("FK_HISTORIAL_USUARIO");
             });
 
             OnModelCreatingPartial(modelBuilder);

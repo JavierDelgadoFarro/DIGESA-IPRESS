@@ -73,7 +73,7 @@ namespace VisitasTickets.API.Controllers
                 .Include(a => a.IdEstadoAtencionNavigation)
                 .Include(a => a.IdUsuarioRegistroNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
-                .Where(a => a.IdEstadoAtencionNavigation.Orden < 3) // Pendiente y En Ventanilla
+                .Where(a => a.IdEstadoAtencionNavigation.Orden < 4) // Pendiente, En Ventanilla y En Pausa
                 .OrderBy(a => a.FechaRegistro)
                 .Select(a => new AtencionDto
                 {
@@ -115,7 +115,7 @@ namespace VisitasTickets.API.Controllers
                     .ThenInclude(u => u!.IdPersonalNavigation)
                 .Include(a => a.IdUsuarioActualizaNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
-                .Where(a => a.IdEstadoAtencionNavigation.Orden == 3) // Atendido
+                .Where(a => a.IdEstadoAtencionNavigation.NombreEstado == "Atendido")
                 .OrderByDescending(a => a.FechaActualizacion)
                 .Select(a => new AtencionDto
                 {
@@ -230,6 +230,21 @@ namespace VisitasTickets.API.Controllers
             _context.UtdAtencions.Add(atencion);
             await _context.SaveChangesAsync();
 
+            // Registrar el historial inicial
+            var historialInicial = new UtdHistorialAtencion
+            {
+                IdAtencion = atencion.IdAtencion,
+                IdEstadoAnterior = null, // No hay estado anterior
+                IdEstadoNuevo = estadoPendiente.IdEstadoAtencion,
+                IdUsuario = userId,
+                FechaCambio = atencion.FechaRegistro,
+                TiempoEnEstadoAnterior = null,
+                Observacion = "Registro inicial de la atención"
+            };
+            
+            _context.UtdHistorialAtencions.Add(historialInicial);
+            await _context.SaveChangesAsync();
+
             // Cargar las navegaciones para devolver el DTO completo
             await _context.Entry(atencion).Reference(a => a.IdTipoTramiteNavigation).LoadAsync();
             await _context.Entry(atencion).Reference(a => a.IdEstadoAtencionNavigation).LoadAsync();
@@ -279,6 +294,30 @@ namespace VisitasTickets.API.Controllers
                 var userIdClaim = User.FindFirst("UsuarioId");
                 int? userId = userIdClaim != null ? int.Parse(userIdClaim.Value) : null;
 
+                // Guardar el estado anterior para el historial
+                int? estadoAnterior = atencion.IdEstadoAtencion;
+                DateTime fechaCambio = DateTime.Now;
+
+                // Calcular tiempo en el estado anterior (en SEGUNDOS para mayor precisión)
+                int? tiempoEnEstadoAnterior = null;
+                
+                // Buscar el último registro de historial para calcular el tiempo
+                var ultimoHistorial = await _context.UtdHistorialAtencions
+                    .Where(h => h.IdAtencion == id)
+                    .OrderByDescending(h => h.FechaCambio)
+                    .FirstOrDefaultAsync();
+                
+                if (ultimoHistorial != null)
+                {
+                    tiempoEnEstadoAnterior = (int)(fechaCambio - ultimoHistorial.FechaCambio).TotalSeconds;
+                }
+                else
+                {
+                    // Si no hay historial, calcular desde la fecha de registro
+                    tiempoEnEstadoAnterior = (int)(fechaCambio - atencion.FechaRegistro).TotalSeconds;
+                }
+
+                // Actualizar la atención
                 atencion.IdEstadoAtencion = dto.IdEstadoAtencion;
                 
                 // Solo actualizar Observacion si viene en el DTO
@@ -293,8 +332,22 @@ namespace VisitasTickets.API.Controllers
                     atencion.ObservacionAtencion = dto.ObservacionAtencion;
                 }
                 
-                atencion.FechaActualizacion = DateTime.Now;
+                atencion.FechaActualizacion = fechaCambio;
                 atencion.IdUsuarioActualiza = userId;
+
+                // Registrar en el historial
+                var historial = new UtdHistorialAtencion
+                {
+                    IdAtencion = id,
+                    IdEstadoAnterior = estadoAnterior,
+                    IdEstadoNuevo = dto.IdEstadoAtencion,
+                    IdUsuario = userId,
+                    FechaCambio = fechaCambio,
+                    TiempoEnEstadoAnterior = tiempoEnEstadoAnterior,
+                    Observacion = dto.ObservacionAtencion // Guardar la observación del cambio
+                };
+
+                _context.UtdHistorialAtencions.Add(historial);
 
                 await _context.SaveChangesAsync();
 
@@ -359,6 +412,178 @@ namespace VisitasTickets.API.Controllers
                 .ToListAsync();
 
             return Ok(estados);
+        }
+
+        // GET: api/atenciones/{id}/historial
+        [HttpGet("{id}/historial")]
+        public async Task<ActionResult<IEnumerable<HistorialAtencionDto>>> GetHistorialAtencion(int id)
+        {
+            // Verificar si la atención existe
+            var atencionExiste = await _context.UtdAtencions.AnyAsync(a => a.IdAtencion == id);
+            
+            if (!atencionExiste)
+            {
+                return NotFound(new { message = $"Atención con ID {id} no encontrada." });
+            }
+
+            var historial = await _context.UtdHistorialAtencions
+                .Where(h => h.IdAtencion == id)
+                .Include(h => h.IdUsuarioNavigation!)
+                    .ThenInclude(u => u.IdPersonalNavigation!)
+                .Include(h => h.IdEstadoAnteriorNavigation)
+                .Include(h => h.IdEstadoNuevoNavigation)
+                .OrderBy(h => h.FechaCambio)
+                .Select(h => new HistorialAtencionDto
+                {
+                    IdHistorial = h.IdHistorial,
+                    IdAtencion = h.IdAtencion,
+                    IdEstadoAnterior = h.IdEstadoAnterior,
+                    NombreEstadoAnterior = h.IdEstadoAnteriorNavigation != null 
+                        ? h.IdEstadoAnteriorNavigation.NombreEstado 
+                        : null,
+                    IdEstadoNuevo = h.IdEstadoNuevo,
+                    NombreEstadoNuevo = h.IdEstadoNuevoNavigation.NombreEstado,
+                    OrdenEstadoNuevo = h.IdEstadoNuevoNavigation.Orden,
+                    IdUsuario = h.IdUsuario,
+                    NombreUsuario = h.IdUsuarioNavigation != null && h.IdUsuarioNavigation.IdPersonalNavigation != null
+                        ? h.IdUsuarioNavigation.IdPersonalNavigation.Nombre + " " + 
+                          h.IdUsuarioNavigation.IdPersonalNavigation.Paterno + " " +
+                          h.IdUsuarioNavigation.IdPersonalNavigation.Materno
+                        : null,
+                    FechaCambio = h.FechaCambio,
+                    Observacion = h.Observacion,
+                    TiempoEnEstadoAnterior = h.TiempoEnEstadoAnterior
+                })
+                .ToListAsync();
+
+            // Asignar el tiempo en cada estado usando los datos guardados en BD
+            for (int i = 0; i < historial.Count; i++)
+            {
+                if (i < historial.Count - 1)
+                {
+                    // No es el último registro, usar el TiempoEnEstadoAnterior del siguiente registro
+                    // (ese campo guarda cuánto tiempo estuvo en el estado actual antes de cambiar, en SEGUNDOS)
+                    historial[i].MinutosEnEsteEstado = historial[i + 1].TiempoEnEstadoAnterior;
+                }
+                else
+                {
+                    // Es el último registro (estado actual)
+                    // Solo calcular tiempo si NO es un estado final (Atendido tiene Orden >= 4)
+                    if (historial[i].OrdenEstadoNuevo < 4)
+                    {
+                        // Aún está en proceso (Pendiente, En Ventanilla o En Pausa)
+                        var tiempoEnSegundos = (int)(DateTime.Now - historial[i].FechaCambio).TotalSeconds;
+                        historial[i].MinutosEnEsteEstado = tiempoEnSegundos;
+                    }
+                    else
+                    {
+                        // Es un estado final (Atendido), no mostrar tiempo
+                        historial[i].MinutosEnEsteEstado = null;
+                    }
+                }
+            }
+
+            return Ok(historial);
+        }
+
+        // GET: api/atenciones/{id}/tiempo-activo
+        // Calcula el tiempo activo en ventanilla (excluyendo pausas)
+        [HttpGet("{id}/tiempo-activo")]
+        public async Task<ActionResult<object>> GetTiempoActivoVentanilla(int id)
+        {
+            // Verificar si la atención existe
+            var atencion = await _context.UtdAtencions
+                .Include(a => a.IdEstadoAtencionNavigation)
+                .FirstOrDefaultAsync(a => a.IdAtencion == id);
+            
+            if (atencion == null)
+            {
+                return NotFound(new { message = $"Atención con ID {id} no encontrada." });
+            }
+
+            // Obtener todo el historial de la atención
+            var historial = await _context.UtdHistorialAtencions
+                .Include(h => h.IdEstadoNuevoNavigation)
+                .Where(h => h.IdAtencion == id)
+                .OrderBy(h => h.FechaCambio)
+                .ToListAsync();
+
+            if (historial.Count == 0)
+            {
+                return Ok(new { 
+                    tiempoActivoMinutos = 0,
+                    tiempoActivoSegundos = 0,
+                    estadoActual = atencion.IdEstadoAtencionNavigation?.NombreEstado,
+                    estadoActivo = false
+                });
+            }
+
+            int tiempoTotalMinutos = 0;
+            DateTime? inicioVentanilla = null;
+
+            // Recorrer el historial para calcular tiempo en "En Ventanilla"
+            for (int i = 0; i < historial.Count; i++)
+            {
+                var estadoNombre = historial[i].IdEstadoNuevoNavigation?.NombreEstado;
+
+                if (estadoNombre == "En Ventanilla")
+                {
+                    // Marcar inicio del periodo en ventanilla
+                    inicioVentanilla = historial[i].FechaCambio;
+                }
+                else if (inicioVentanilla.HasValue && (estadoNombre == "En Pausa" || estadoNombre == "Atendido"))
+                {
+                    // Fin del periodo en ventanilla, calcular tiempo
+                    var tiempoEnMinutos = (int)(historial[i].FechaCambio - inicioVentanilla.Value).TotalMinutes;
+                    tiempoTotalMinutos += tiempoEnMinutos;
+                    inicioVentanilla = null;
+                }
+            }
+
+            // Si actualmente está en ventanilla, sumar el tiempo actual
+            bool estadoActivo = false;
+            if (inicioVentanilla.HasValue && atencion.IdEstadoAtencionNavigation?.NombreEstado == "En Ventanilla")
+            {
+                var tiempoActual = (int)(DateTime.Now - inicioVentanilla.Value).TotalMinutes;
+                tiempoTotalMinutos += tiempoActual;
+                estadoActivo = true;
+            }
+
+            // Calcular en segundos con precisión
+            int tiempoTotalSegundos = 0;
+            
+            // Sumar todos los periodos cerrados en segundos
+            for (int i = 0; i < historial.Count; i++)
+            {
+                var estadoNombre = historial[i].IdEstadoNuevoNavigation?.NombreEstado;
+                
+                if (estadoNombre == "En Ventanilla" && i + 1 < historial.Count)
+                {
+                    var siguienteEstado = historial[i + 1].IdEstadoNuevoNavigation?.NombreEstado;
+                    if (siguienteEstado == "En Pausa" || siguienteEstado == "Atendido")
+                    {
+                        // Periodo cerrado, calcular en segundos
+                        var segundos = (int)(historial[i + 1].FechaCambio - historial[i].FechaCambio).TotalSeconds;
+                        tiempoTotalSegundos += segundos;
+                    }
+                }
+            }
+            
+            // Si actualmente está en ventanilla, sumar tiempo en curso
+            if (estadoActivo && inicioVentanilla.HasValue)
+            {
+                var segundosActuales = (int)(DateTime.Now - inicioVentanilla.Value).TotalSeconds;
+                tiempoTotalSegundos += segundosActuales;
+            }
+
+            return Ok(new
+            {
+                tiempoActivoMinutos = tiempoTotalMinutos,
+                tiempoActivoSegundos = tiempoTotalSegundos,
+                estadoActual = atencion.IdEstadoAtencionNavigation?.NombreEstado,
+                estadoActivo = estadoActivo,
+                ordenEstado = atencion.IdEstadoAtencionNavigation?.Orden
+            });
         }
     }
 }

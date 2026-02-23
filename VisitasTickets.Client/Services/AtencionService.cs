@@ -71,5 +71,17 @@ namespace VisitasTickets.Client.Services
         {
             return await _http.GetFromJsonAsync<List<EstadoAtencionDto>>("api/atenciones/estados") ?? new List<EstadoAtencionDto>();
         }
+
+        // Obtener historial de una atención
+        public async Task<List<HistorialAtencionDto>> GetHistorialAtencionAsync(int idAtencion)
+        {
+            return await _http.GetFromJsonAsync<List<HistorialAtencionDto>>($"api/atenciones/{idAtencion}/historial") ?? new List<HistorialAtencionDto>();
+        }
+
+        // Obtener tiempo activo en ventanilla (excluyendo pausas)
+        public async Task<TiempoActivoDto?> GetTiempoActivoVentanillaAsync(int idAtencion)
+        {
+            return await _http.GetFromJsonAsync<TiempoActivoDto>($"api/atenciones/{idAtencion}/tiempo-activo");
+        }
     }
 }

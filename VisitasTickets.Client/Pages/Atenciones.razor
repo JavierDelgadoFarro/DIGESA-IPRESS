@@ -122,6 +122,29 @@
                                             Atender
                                         </button>
                                     }
+                                    @if (atencion.NombreEstado == "En Ventanilla")
+                                    {
+                                        <button @onclick="@(() => AbrirModalParaReanudar(atencion))"
+                                                class="px-3 py-1 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700 transition-colors inline-flex items-center gap-1"
+                                                title="Ver atención en curso">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            Ver
+                                        </button>
+                                    }
+                                    @if (atencion.NombreEstado == "En Pausa")
+                                    {
+                                        <button @onclick="@(() => AbrirModalParaReanudar(atencion))"
+                                                class="px-3 py-1 text-xs font-medium bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors inline-flex items-center gap-1"
+                                                title="Reanudar atención pausada">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path>
+                                            </svg>
+                                            Reanudar
+                                        </button>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -129,27 +152,29 @@
                 </div>
 
                 <!-- Paginación -->
-                <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-                    <div class="flex items-center gap-2 text-sm text-gray-700">
-                        <span>Mostrar</span>
+                <div class="flex items-center justify-between mt-6 px-6 py-3 border-t border-gray-200 bg-gray-50">
+                    <!-- Items por página -->
+                    <div class="flex items-center gap-2 text-sm text-gray-700 flex-shrink-0">
+                        <span class="whitespace-nowrap">Mostrar</span>
                         <select @bind="pageSize" @bind:after="StateHasChanged"
-                                class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                class="min-w-[70px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                             <option value="6">6</option>
                             <option value="12">12</option>
                             <option value="24">24</option>
                             <option value="48">48</option>
                         </select>
-                        <span>por página</span>
+                        <span class="whitespace-nowrap">por página</span>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-gray-700 mr-4">
+                    <!-- Paginación -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-sm text-gray-700 mr-4 whitespace-nowrap">
                             @((currentPage - 1) * pageSize + 1)-@Math.Min(currentPage * pageSize, AtencionesFiltradasCount) de @AtencionesFiltradasCount
                         </span>
 
                         <button @onclick="@(() => { currentPage = 1; StateHasChanged(); })"
                                 disabled="@(currentPage == 1)"
-                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
                             </svg>
@@ -157,7 +182,7 @@
 
                         <button @onclick="PrevPage"
                                 disabled="@(currentPage == 1)"
-                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                             </svg>
@@ -169,7 +194,7 @@
 
                         <button @onclick="NextPage"
                                 disabled="@(currentPage == totalPages)"
-                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                             </svg>
@@ -177,7 +202,7 @@
 
                         <button @onclick="@(() => { currentPage = totalPages; StateHasChanged(); })"
                                 disabled="@(currentPage == totalPages)"
-                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
                             </svg>
@@ -217,6 +242,8 @@
 
 <!-- Modal Atender -->
 <AtencionAtenderModal IsVisible="@mostrarModalAtender"
+                      IdAtencion="@(atencionSeleccionada?.IdAtencion)"
+                      MostrarCronometro="@mostrarCronometro"
                       Titulo="@tituloModalAtender"
                       TituloObservacion="@tituloObservacionModal"
                       Placeholder="@placeholderObservacion"
@@ -227,7 +254,9 @@
                       @bind-Observacion="@observacionModal"
                       ErrorMessage="@errorModalAtender"
                       OnConfirm="@ConfirmarCambioEstado"
-                      OnClose="@CerrarModalAtender" />
+                      OnClose="@CerrarModalAtender"
+                      OnPausar="@PausarAtencion"
+                      OnContinuar="@ContinuarAtencion" />
 
 <!-- Toast -->
 <Toast />
@@ -253,6 +282,7 @@
 
     // Modal Atender/Finalizar
     private bool mostrarModalAtender = false;
+    private bool mostrarCronometro = false;
     private AtencionDto? atencionSeleccionada = null;
     private string observacionModal = "";
     private string errorModalAtender = "";
@@ -416,10 +446,11 @@
                 observacionModal = "";
                 errorModalAtender = "";
                 accionModal = "finalizar";
-                tituloModalAtender = "Finalizar Atención";
+                tituloModalAtender = "En ventanilla";
                 tituloObservacionModal = "Observación de Atención";
                 placeholderObservacion = "Ingrese los detalles de la atención brindada...";
                 textoBotonConfirmar = "Finalizar Atención";
+                mostrarCronometro = true; // Activar cronómetro
                 mostrarModalAtender = true;
                 
                 // Forzar actualización de la UI
@@ -436,6 +467,96 @@
         }
     }
 
+    private async Task PausarAtencion()
+    {
+        if (atencionSeleccionada == null) return;
+
+        var estadoEnPausa = estados.FirstOrDefault(e => e.NombreEstado == "En Pausa");
+        if (estadoEnPausa == null)
+        {
+            NotificationService.ShowError("No se encontró el estado 'En Pausa'. Ejecute el script 04_Agregar_Estado_En_Pausa.sql");
+            return;
+        }
+
+        var dto = new AtencionUpdateDto
+        {
+            IdAtencion = atencionSeleccionada.IdAtencion,
+            IdEstadoAtencion = estadoEnPausa.IdEstadoAtencion,
+            Observacion = atencionSeleccionada.Observacion,
+            ObservacionAtencion = null
+        };
+
+        try
+        {
+            var ok = await AtencionService.UpdateEstadoAtencionAsync(atencionSeleccionada.IdAtencion, dto);
+            if (ok)
+            {
+                atencionSeleccionada.IdEstadoAtencion = estadoEnPausa.IdEstadoAtencion;
+                atencionSeleccionada.NombreEstado = "En Pausa";
+                atencionSeleccionada.OrdenEstado = 3;
+                NotificationService.ShowInfo("Atención pausada correctamente");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError($"Error al pausar la atención: {ex.Message}");
+        }
+    }
+
+    private async Task ContinuarAtencion()
+    {
+        if (atencionSeleccionada == null) return;
+
+        var estadoEnVentanilla = estados.FirstOrDefault(e => e.NombreEstado == "En Ventanilla");
+        if (estadoEnVentanilla == null)
+        {
+            NotificationService.ShowError("No se encontró el estado 'En Ventanilla'.");
+            return;
+        }
+
+        var dto = new AtencionUpdateDto
+        {
+            IdAtencion = atencionSeleccionada.IdAtencion,
+            IdEstadoAtencion = estadoEnVentanilla.IdEstadoAtencion,
+            Observacion = atencionSeleccionada.Observacion,
+            ObservacionAtencion = null
+        };
+
+        try
+        {
+            var ok = await AtencionService.UpdateEstadoAtencionAsync(atencionSeleccionada.IdAtencion, dto);
+            if (ok)
+            {
+                atencionSeleccionada.IdEstadoAtencion = estadoEnVentanilla.IdEstadoAtencion;
+                atencionSeleccionada.NombreEstado = "En Ventanilla";
+                atencionSeleccionada.OrdenEstado = 2;
+                NotificationService.ShowSuccess("Atención reanudada correctamente");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError($"Error al reanudar la atención: {ex.Message}");
+        }
+    }
+
+    private void AbrirModalParaReanudar(AtencionDto atencion)
+    {
+        // Abrir el modal con el cronómetro para una atención que ya está en ventanilla o pausada
+        atencionSeleccionada = atencion;
+        observacionModal = atencion.ObservacionAtencion ?? "";
+        errorModalAtender = "";
+        accionModal = "finalizar";
+        tituloModalAtender = atencion.NombreEstado == "En Pausa" ? "Atención en Pausa" : "En ventanilla";
+        tituloObservacionModal = "Observación de Atención";
+        placeholderObservacion = "Ingrese los detalles de la atención brindada...";
+        textoBotonConfirmar = "Finalizar Atención";
+        mostrarCronometro = true;
+        mostrarModalAtender = true;
+        StateHasChanged();
+    }
+
     private async Task FinalizarAtencion(AtencionDto atencion)
     {
         // Este método ya no se usa desde los botones, solo desde el modal
@@ -444,6 +565,7 @@
     private void CerrarModalAtender()
     {
         mostrarModalAtender = false;
+        mostrarCronometro = false;
         atencionSeleccionada = null;
         observacionModal = "";
         errorModalAtender = "";
@@ -565,6 +687,7 @@
         {
             "Pendiente" => "border-yellow-400",
             "En Ventanilla" => "border-blue-400",
+            "En Pausa" => "border-orange-400",
             "Atendido" => "border-green-400",
             _ => "border-gray-300"
         };
@@ -576,6 +699,7 @@
         {
             "Pendiente" => "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800",
             "En Ventanilla" => "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800",
+            "En Pausa" => "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800",
             "Atendido" => "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800",
             _ => "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800"
         };
@@ -587,6 +711,7 @@
         {
             "Pendiente" => "🟡",
             "En Ventanilla" => "🔵",
+            "En Pausa" => "🟠",
             "Atendido" => "🟢",
             _ => "⚪"
         };

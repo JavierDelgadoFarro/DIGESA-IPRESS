@@ -1,3 +1,8 @@
+@using VisitasTickets.Client.Services
+@using VisitasTickets.Domain.Dtos
+@using System.Timers
+@inject AtencionService AtencionService
+
 @if (IsVisible)
 {
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -5,11 +10,40 @@
             
             <!-- Header -->
             <div class="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-lg flex-shrink-0">
-                <h2 class="text-2xl font-bold">@Titulo</h2>
-                @if (!string.IsNullOrWhiteSpace(NombrePersona))
-                {
-                    <p class="text-sm opacity-90 mt-1">@NombrePersona</p>
-                }
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold">@Titulo</h2>
+                        @if (!string.IsNullOrWhiteSpace(NombrePersona))
+                        {
+                            <p class="text-sm opacity-90 mt-1">@NombrePersona</p>
+                        }
+                    </div>
+                    
+                    <!-- Cronómetro -->
+                    @if (MostrarCronometro && IdAtencion.HasValue)
+                    {
+                        <div class="text-right">
+                            <p class="text-xs opacity-80">Tiempo en ventanilla</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                @if (EstadoActivo)
+                                {
+                                    <span class="flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="flex h-2 w-2 rounded-full bg-yellow-400"></span>
+                                }
+                                <span class="text-2xl font-mono font-bold">@FormatearTiempo(tiempoActivoSegundos)</span>
+                            </div>
+                            <p class="text-xs opacity-70 mt-1">
+                                @(EstadoActivo ? "⏱️ Activo" : "⏸️ En Pausa")
+                            </p>
+                        </div>
+                    }
+                </div>
             </div>
 
             <!-- Body -->
@@ -57,17 +91,48 @@
             </div>
 
             <!-- Footer -->
-            <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3 flex-shrink-0">
-                <button type="button"
-                        @onclick="HandleClose"
-                        class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
-                    Cancelar
-                </button>
-                <button type="button"
-                        @onclick="HandleConfirm"
-                        class="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg hover:from-blue-700 hover:to-blue-900 transition-all shadow-md font-medium">
-                    @TextoBotonConfirmar
-                </button>
+            <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-between gap-3 flex-shrink-0">
+                <div class="flex gap-2">
+                    <button type="button"
+                            @onclick="HandleClose"
+                            class="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                        Cerrar
+                    </button>
+                </div>
+                
+                <div class="flex gap-2">
+                    @if (MostrarCronometro && IdAtencion.HasValue)
+                    {
+                        @if (EstadoActivo)
+                        {
+                            <button type="button"
+                                    @onclick="HandlePausar"
+                                    class="px-5 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium inline-flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M5 4a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V4zm8 0a2 2 0 012-2h2a2 2 0 012 2v12a2 2 0 01-2 2h-2a2 2 0 01-2-2V4z"></path>
+                                </svg>
+                                Pausar
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button"
+                                    @onclick="HandleContinuar"
+                                    class="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium inline-flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path>
+                                </svg>
+                                Continuar
+                            </button>
+                        }
+                    }
+                    
+                    <button type="button"
+                            @onclick="HandleConfirm"
+                            class="px-5 py-2 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg hover:from-blue-700 hover:to-blue-900 transition-all shadow-md font-medium">
+                        @TextoBotonConfirmar
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -76,6 +141,8 @@
 
 @code {
     [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public int? IdAtencion { get; set; }
+    [Parameter] public bool MostrarCronometro { get; set; }
     [Parameter] public string Titulo { get; set; } = "Atender Persona";
     [Parameter] public string TituloObservacion { get; set; } = "Observación de Atención";
     [Parameter] public string Placeholder { get; set; } = "Ingrese detalles de la atención...";
@@ -88,13 +155,91 @@
     [Parameter] public string ErrorMessage { get; set; } = "";
     [Parameter] public EventCallback OnConfirm { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnPausar { get; set; }
+    [Parameter] public EventCallback OnContinuar { get; set; }
 
     private string observacion = "";
     private int caracteresRestantes => 1000 - (observacion?.Length ?? 0);
+    private Timer? timer;
+    private int tiempoActivoSegundos = 0;
+    private bool EstadoActivo = false;
 
     protected override void OnParametersSet()
     {
         observacion = Observacion ?? "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsVisible && MostrarCronometro && IdAtencion.HasValue)
+        {
+            if (firstRender || timer == null)
+            {
+                await IniciarCronometro();
+            }
+        }
+        else if (!IsVisible && timer != null)
+        {
+            DetenerCronometro();
+        }
+    }
+
+    private async Task IniciarCronometro()
+    {
+        // Obtener tiempo inicial
+        await ActualizarTiempoActivo();
+
+        // Crear timer que se actualiza cada segundo
+        timer = new Timer(1000);
+        timer.Elapsed += async (sender, e) => await OnTimerElapsed();
+        timer.Start();
+    }
+
+    private void DetenerCronometro()
+    {
+        if (timer != null)
+        {
+            timer.Stop();
+            timer.Dispose();
+            timer = null;
+        }
+    }
+
+    private async Task OnTimerElapsed()
+    {
+        await ActualizarTiempoActivo();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ActualizarTiempoActivo()
+    {
+        if (!IdAtencion.HasValue) return;
+
+        try
+        {
+            var resultado = await AtencionService.GetTiempoActivoVentanillaAsync(IdAtencion.Value);
+            if (resultado != null)
+            {
+                tiempoActivoSegundos = resultado.TiempoActivoSegundos;
+                EstadoActivo = resultado.EstadoActivo;
+            }
+        }
+        catch
+        {
+            // Error al obtener tiempo, mantener valor actual
+        }
+    }
+
+    private string FormatearTiempo(int segundos)
+    {
+        var horas = segundos / 3600;
+        var minutos = (segundos % 3600) / 60;
+        var segs = segundos % 60;
+
+        if (horas > 0)
+            return $"{horas:D2}:{minutos:D2}:{segs:D2}";
+        else
+            return $"{minutos:D2}:{segs:D2}";
     }
 
     private async Task OnObservacionInput(ChangeEventArgs e)
@@ -109,11 +254,30 @@
         {
             return; // El componente padre manejará la validación
         }
+        DetenerCronometro();
         await OnConfirm.InvokeAsync();
     }
 
     private async Task HandleClose()
     {
+        DetenerCronometro();
         await OnClose.InvokeAsync();
+    }
+
+    private async Task HandlePausar()
+    {
+        await OnPausar.InvokeAsync();
+        await ActualizarTiempoActivo(); // Actualizar inmediatamente después de pausar
+    }
+
+    private async Task HandleContinuar()
+    {
+        await OnContinuar.InvokeAsync();
+        await ActualizarTiempoActivo(); // Actualizar inmediatamente después de continuar
+    }
+
+    public void Dispose()
+    {
+        DetenerCronometro();
     }
 }

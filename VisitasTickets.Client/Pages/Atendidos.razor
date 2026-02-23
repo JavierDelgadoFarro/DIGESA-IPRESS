@@ -1,0 +1,659 @@
+@page "/atenciones/atendidos"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@layout MainLayout
+@using VisitasTickets.Client.Services
+@using VisitasTickets.Client.Components.Common
+@using VisitasTickets.Domain.Dtos
+@inject AtencionService AtencionService
+@inject NotificationService NotificationService
+
+<PageTitle>Historial de Atenciones - Sistema de Atenciones</PageTitle>
+
+<!-- Container Principal -->
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Título de la Página -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Historial de Atenciones</h1>
+            <p class="text-sm text-gray-500 mt-1">Consulta todas las atenciones finalizadas</p>
+        </div>
+    </div>
+
+    <!-- Card con Filtros y Lista -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <!-- Filtros -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <!-- Buscador -->
+            <div class="flex-1 max-w-md">
+                <div class="relative">
+                    <input type="text"
+                           @bind="searchText"
+                           @bind:event="oninput"
+                           @bind:after="OnSearchChanged"
+                           placeholder="Buscar por nombre, apellido o documento..."
+                           class="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
+                    <svg class="absolute right-3 top-2.5 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <!-- Filtro por Trámite -->
+                <select @bind="tramiteFiltro" @bind:after="OnFiltroChanged"
+                        class="min-w-[180px] px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all">
+                    <option value="">Todos los trámites</option>
+                    @foreach (var tramite in tiposTramite)
+                    {
+                        <option value="@tramite.IdTipoTramite">@tramite.NombreTramite</option>
+                    }
+                </select>
+
+                <!-- Filtro Preferencial -->
+                <select @bind="preferencialFiltro" @bind:after="OnFiltroChanged"
+                        class="min-w-[140px] px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all">
+                    <option value="">Todos</option>
+                    <option value="preferencial">⭐ Preferenciales</option>
+                    <option value="normal">Normales</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Lista de Atenciones -->
+        <div class="p-6">
+            @if (isLoading)
+            {
+                <div class="flex justify-center items-center py-16">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+            }
+            else if (AtencionesFiltradasPaginadas.Any())
+            {
+                <div class="space-y-3">
+                    @foreach (var atencion in AtencionesFiltradasPaginadas)
+                    {
+                        var isExpanded = atencionExpandida == atencion.IdAtencion;
+                        var tiempoTotal = CalcularTiempoTotal(atencion);
+
+                        <div class="border-2 border-green-300 rounded-lg overflow-hidden bg-white hover:shadow-md transition-all">
+                            <!-- Header Clickeable -->
+                            <div class="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                                 @onclick="@(() => ToggleExpand(atencion.IdAtencion))">
+                                <div class="flex items-center justify-between">
+                                    <!-- Información Principal -->
+                                    <div class="flex-1 flex items-center gap-4">
+                                        <!-- Expand Icon -->
+                                        <div class="text-gray-400">
+                                            @if (isExpanded)
+                                            {
+                                                <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            }
+                                            else
+                                            {
+                                                <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                </svg>
+                                            }
+                                        </div>
+
+                                        <!-- Datos del Ciudadano -->
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-3 mb-1">
+                                                <span class="text-sm font-bold text-gray-900">@atencion.NombreCompleto</span>
+                                                <span class="text-xs text-gray-500">@atencion.TipoDocumento: @atencion.NumeroDocumento</span>
+                                                @if (atencion.EsPreferencial)
+                                                {
+                                                    <span class="text-xs font-semibold px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full">
+                                                        ⭐ Preferencial
+                                                    </span>
+                                                }
+                                            </div>
+                                            <div class="flex items-center gap-4 text-xs text-gray-600">
+                                                <span class="flex items-center gap-1">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                    </svg>
+                                                    @atencion.NombreTramite
+                                                </span>
+                                                <span class="flex items-center gap-1">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    @atencion.FechaActualizacion?.ToString("dd/MM/yyyy HH:mm")
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Badge de Estado y Tiempo -->
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs font-semibold px-3 py-1.5 bg-green-100 text-green-800 rounded-full">
+                                                🟢 Atendido
+                                            </span>
+                                            @if (tiempoTotal.TotalMinutes > 0)
+                                            {
+                                                <span class="text-xs text-gray-500 font-medium">
+                                                    ⏱️ @FormatearTiempo(tiempoTotal)
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detalles Expandidos -->
+                            @if (isExpanded)
+                            {
+                                <div class="border-t border-gray-200 bg-gray-50 p-6 animate-fadeIn">
+                                    @if (cargandoHistorial)
+                                    {
+                                        <div class="flex justify-center items-center py-8">
+                                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                            <span class="ml-3 text-sm text-gray-600">Cargando historial...</span>
+                                        </div>
+                                    }
+                                    else if (historialesPorAtencion.ContainsKey(atencion.IdAtencion))
+                                    {
+                                        var historial = historialesPorAtencion[atencion.IdAtencion];
+                                        // Calcular tiempo total solo de estados con tiempo (excluyendo estado final y pausa)
+                                        var tiempoTotalCalculado = historial.Any()
+                                            ? TimeSpan.FromSeconds(historial.Where(h => h.MinutosEnEsteEstado.HasValue && h.OrdenEstadoNuevo != 3).Sum(h => h.MinutosEnEsteEstado.Value))
+                                            : TimeSpan.Zero;
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <!-- Columna Izquierda: Timeline Dinámico -->
+                                            <div class="space-y-4">
+                                                <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    Historial de Atención
+                                                </h3>
+
+                                                @if (historial.Any())
+                                                {
+                                                    @for (int i = 0; i < historial.Count; i++)
+                                                    {
+                                                        var item = historial[i];
+                                                        var esUltimo = i == historial.Count - 1;
+
+                                                        <div class="flex gap-3">
+                                                            <div class="flex flex-col items-center">
+                                                                <div class="w-8 h-8 rounded-full @GetEstadoColorClass(item.OrdenEstadoNuevo) flex items-center justify-center">
+                                                                    <span class="text-sm">@GetEstadoIcon(item.OrdenEstadoNuevo)</span>
+                                                                </div>
+                                                                @if (!esUltimo)
+                                                                {
+                                                                    <div class="w-0.5 h-full bg-gray-300 mt-1"></div>
+                                                                }
+                                                            </div>
+                                                            <div class="flex-1 @(!esUltimo ? "pb-4" : "")">
+                                                                <p class="text-sm font-semibold text-gray-900">@item.NombreEstadoNuevo</p>
+                                                                <p class="text-xs text-gray-600">@item.FechaCambio.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                                                                
+                                                                @if (!string.IsNullOrEmpty(item.NombreUsuario))
+                                                                {
+                                                                    <p class="text-xs text-gray-500 mt-1">
+                                                                        @if (item.IdEstadoAnterior == null)
+                                                                        {
+                                                                            <span>Registrado por: <span class="font-medium">@item.NombreUsuario</span></span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span>Cambiado por: <span class="font-medium">@item.NombreUsuario</span></span>
+                                                                        }
+                                                                    </p>
+                                                                }
+                                                                
+                                                                @if (item.MinutosEnEsteEstado.HasValue)
+                                                                {
+                                                                    var tiempoEnEstado = TimeSpan.FromSeconds(item.MinutosEnEsteEstado.Value);
+                                                                    <p class="text-xs text-blue-600 font-medium mt-1">
+                                                                        ⏱️ Tiempo en este estado: @FormatearTiempo(tiempoEnEstado)
+                                                                    </p>
+                                                                }
+                                                                else if (esUltimo && item.OrdenEstadoNuevo >= 4)
+                                                                {
+                                                                    <p class="text-xs text-green-600 font-medium mt-1">
+                                                                        ✅ Atención finalizada
+                                                                    </p>
+                                                                }
+
+                                                                @if (!string.IsNullOrEmpty(item.Observacion) && item.IdEstadoAnterior != null)
+                                                                {
+                                                                    <div class="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                                                        <p class="text-xs text-blue-900">@item.Observacion</p>
+                                                                    </div>
+                                                                }
+
+                                                                @if (esUltimo && tiempoTotalCalculado.TotalMinutes > 0)
+                                                                {
+                                                                    <p class="text-xs text-green-600 font-bold mt-2">
+                                                                        🏁 Tiempo total de atención: @FormatearTiempo(tiempoTotalCalculado)
+                                                                    </p>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <p class="text-sm text-gray-500 italic">No hay historial disponible</p>
+                                                }
+                                            </div>
+
+                                            <!-- Columna Derecha: Detalles -->
+                                            <div class="space-y-4">
+                                                <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                    </svg>
+                                                    Detalles de la Atención
+                                                </h3>
+
+                                            <!-- Información del Trámite -->
+                                            <div class="bg-white rounded-lg p-3 border border-gray-200">
+                                                <p class="text-xs text-gray-500 mb-1">Tipo de Trámite</p>
+                                                <p class="text-sm font-semibold text-gray-900">@atencion.NombreTramite</p>
+                                                @if (!string.IsNullOrEmpty(atencion.DescripcionTramite))
+                                                {
+                                                    <p class="text-xs text-gray-600 mt-1">@atencion.DescripcionTramite</p>
+                                                }
+                                            </div>
+
+                                            <!-- Atención Preferencial -->
+                                            @if (atencion.EsPreferencial && !string.IsNullOrEmpty(atencion.NombreTipoPreferencial))
+                                            {
+                                                <div class="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                                                    <p class="text-xs text-amber-700 mb-1">Atención Preferencial</p>
+                                                    <p class="text-sm font-semibold text-amber-900">@atencion.NombreTipoPreferencial</p>
+                                                </div>
+                                            }
+
+                                            <!-- Observaciones -->
+                                            @if (!string.IsNullOrEmpty(atencion.Observacion))
+                                            {
+                                                <div class="bg-white rounded-lg p-3 border border-gray-200">
+                                                    <p class="text-xs text-gray-500 mb-1">Observación Inicial (Administrado)</p>
+                                                    <p class="text-sm text-gray-700 italic">@atencion.Observacion</p>
+                                                </div>
+                                            }
+
+                                            @if (!string.IsNullOrEmpty(atencion.ObservacionAtencion))
+                                            {
+                                                <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                                    <p class="text-xs text-blue-700 mb-1">Observación de Ventanilla</p>
+                                                    <p class="text-sm text-blue-900 font-medium">@atencion.ObservacionAtencion</p>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Paginación -->
+                <div class="flex items-center justify-between mt-6 px-6 py-3 border-t border-gray-200 bg-gray-50">
+                    <!-- Items por página -->
+                    <div class="flex items-center gap-2 text-sm text-gray-700 flex-shrink-0">
+                        <span class="whitespace-nowrap">Mostrar</span>
+                        <select @bind="itemsPorPagina" @bind:after="OnItemsPorPaginaChanged"
+                                class="min-w-[70px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="6">6</option>
+                            <option value="12">12</option>
+                            <option value="24">24</option>
+                            <option value="48">48</option>
+                        </select>
+                        <span class="whitespace-nowrap">por página</span>
+                    </div>
+
+                    <!-- Paginación -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-sm text-gray-700 mr-4 whitespace-nowrap">
+                            @((paginaActual - 1) * itemsPorPagina + 1)-@Math.Min(paginaActual * itemsPorPagina, AtencionesFiltradas.Count()) de @AtencionesFiltradas.Count()
+                        </span>
+
+                        <button @onclick="@(() => CambiarPagina(1))"
+                                disabled="@(paginaActual == 1)"
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+
+                        <button @onclick="@(() => CambiarPagina(paginaActual - 1))"
+                                disabled="@(paginaActual == 1)"
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+
+                        <button class="px-3 py-1 bg-blue-600 text-white text-sm font-medium rounded-lg min-w-[40px]">
+                            @paginaActual
+                        </button>
+
+                        <button @onclick="@(() => CambiarPagina(paginaActual + 1))"
+                                disabled="@(paginaActual == totalPaginas)"
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+
+                        <button @onclick="@(() => CambiarPagina(totalPaginas))"
+                                disabled="@(paginaActual == totalPaginas)"
+                                class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-16">
+                    <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">No hay atenciones finalizadas</h3>
+                    <p class="mt-2 text-sm text-gray-500">No se encontraron atenciones con los filtros seleccionados</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Toast Component -->
+<Toast @ref="toast" />
+
+<style>
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fadeIn {
+        animation: fadeIn 0.3s ease-out;
+    }
+</style>
+
+@code {
+    private List<AtencionDto> atenciones = new();
+    private List<TipoTramiteDto> tiposTramite = new();
+    private Dictionary<int, List<HistorialAtencionDto>> historialesPorAtencion = new();
+    private string searchText = "";
+    private string tramiteFiltro = "";
+    private string preferencialFiltro = "";
+    private bool isLoading = false;
+    private int? atencionExpandida = null;
+    private bool cargandoHistorial = false;
+
+    // Paginación
+    private int paginaActual = 1;
+    private int itemsPorPagina = 12;
+    private int AtencionesFiltradasCount => AtencionesFiltradas.Count();
+    private int totalPaginas => (int)Math.Ceiling((double)AtencionesFiltradasCount / itemsPorPagina);
+
+    private Toast? toast;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            atenciones = await AtencionService.GetAtencionesHistorialAsync();
+            tiposTramite = await AtencionService.GetTiposTramiteAsync();
+            
+            // Cargar historial de todas las atenciones para mostrar tiempo correcto en badges
+            await CargarHistorialTodasAtenciones();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError($"Error al cargar datos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<AtencionDto> AtencionesFiltradas
+    {
+        get
+        {
+            var resultado = atenciones.AsEnumerable();
+
+            // Filtro de búsqueda
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                var search = searchText.ToLower();
+                resultado = resultado.Where(a =>
+                    a.Nombres.ToLower().Contains(search) ||
+                    a.Apellidos.ToLower().Contains(search) ||
+                    a.NumeroDocumento.Contains(search)
+                );
+            }
+
+            // Filtro por trámite
+            if (!string.IsNullOrEmpty(tramiteFiltro) && int.TryParse(tramiteFiltro, out int idTramite))
+            {
+                resultado = resultado.Where(a => a.IdTipoTramite == idTramite);
+            }
+
+            // Filtro preferencial
+            if (preferencialFiltro == "preferencial")
+            {
+                resultado = resultado.Where(a => a.EsPreferencial);
+            }
+            else if (preferencialFiltro == "normal")
+            {
+                resultado = resultado.Where(a => !a.EsPreferencial);
+            }
+
+            // Ordenar por fecha de atención descendente
+            return resultado.OrderByDescending(a => a.FechaActualizacion ?? a.FechaRegistro);
+        }
+    }
+
+    private IEnumerable<AtencionDto> AtencionesFiltradasPaginadas
+    {
+        get
+        {
+            return AtencionesFiltradas
+                .Skip((paginaActual - 1) * itemsPorPagina)
+                .Take(itemsPorPagina);
+        }
+    }
+
+    private async Task ToggleExpand(int idAtencion)
+    {
+        if (atencionExpandida == idAtencion)
+        {
+            atencionExpandida = null;
+        }
+        else
+        {
+            atencionExpandida = idAtencion;
+            
+            // Cargar el historial si no lo tenemos ya
+            if (!historialesPorAtencion.ContainsKey(idAtencion))
+            {
+                await CargarHistorial(idAtencion);
+            }
+        }
+    }
+
+    private async Task CargarHistorial(int idAtencion)
+    {
+        try
+        {
+            cargandoHistorial = true;
+            StateHasChanged();
+
+            var historial = await AtencionService.GetHistorialAtencionAsync(idAtencion);
+            historialesPorAtencion[idAtencion] = historial;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.ShowError($"Error al cargar historial: {ex.Message}");
+        }
+        finally
+        {
+            cargandoHistorial = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarHistorialTodasAtenciones()
+    {
+        try
+        {
+            // Cargar historial de todas las atenciones (en paralelo para mejor performance)
+            var tareasHistorial = atenciones.Select(async atencion =>
+            {
+                try
+                {
+                    var historial = await AtencionService.GetHistorialAtencionAsync(atencion.IdAtencion);
+                    return (atencion.IdAtencion, historial);
+                }
+                catch
+                {
+                    return (atencion.IdAtencion, new List<HistorialAtencionDto>());
+                }
+            });
+
+            var resultados = await Task.WhenAll(tareasHistorial);
+            
+            foreach (var (idAtencion, historial) in resultados)
+            {
+                historialesPorAtencion[idAtencion] = historial;
+            }
+            
+            // Forzar re-render para actualizar badges con tiempo correcto
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // Silenciar error pero registrar en consola
+            Console.WriteLine($"Error al cargar historiales: {ex.Message}");
+        }
+    }
+
+    private string GetEstadoIcon(int orden)
+    {
+        return orden switch
+        {
+            1 => "🟡",
+            2 => "🔵",
+            3 => "�",
+            4 => "🟢",
+            _ => "⚪"
+        };
+    }
+
+    private string GetEstadoColorClass(int orden)
+    {
+        return orden switch
+        {
+            1 => "bg-yellow-100",
+            2 => "bg-blue-100",
+            3 => "bg-orange-100",
+            4 => "bg-green-100",
+            _ => "bg-gray-100"
+        };
+    }
+
+    private TimeSpan CalcularTiempoTotal(AtencionDto atencion)
+    {
+        // Si ya cargamos el historial para esta atención, calcular excluyendo pausas
+        if (historialesPorAtencion.ContainsKey(atencion.IdAtencion))
+        {
+            var historial = historialesPorAtencion[atencion.IdAtencion];
+            if (historial.Any())
+            {
+                var tiempoSegundos = historial
+                    .Where(h => h.MinutosEnEsteEstado.HasValue && h.OrdenEstadoNuevo != 3)
+                    .Sum(h => h.MinutosEnEsteEstado.Value);
+                
+                return TimeSpan.FromSeconds(tiempoSegundos);
+            }
+            return TimeSpan.Zero;
+        }
+        
+        // Fallback: usar diferencia de fechas (incluye pausas, pero es mejor que nada)
+        // Este solo se usa si el historial aún no se cargó
+        return atencion.FechaActualizacion.HasValue
+            ? (atencion.FechaActualizacion.Value - atencion.FechaRegistro)
+            : TimeSpan.Zero;
+    }
+
+    private string FormatearTiempo(TimeSpan tiempo)
+    {
+        if (tiempo.TotalDays >= 1)
+        {
+            return $"{(int)tiempo.TotalDays} día{((int)tiempo.TotalDays > 1 ? "s" : "")} {tiempo.Hours}h {tiempo.Minutes}min";
+        }
+        else if (tiempo.TotalHours >= 1)
+        {
+            return $"{(int)tiempo.TotalHours}h {tiempo.Minutes}min {tiempo.Seconds}s";
+        }
+        else if (tiempo.TotalMinutes >= 1)
+        {
+            return $"{tiempo.Minutes}min {tiempo.Seconds}s";
+        }
+        else
+        {
+            return $"{tiempo.Seconds} segundo{(tiempo.Seconds != 1 ? "s" : "")}";
+        }
+    }
+
+    private void OnSearchChanged()
+    {
+        paginaActual = 1;
+        StateHasChanged();
+    }
+
+    private void OnFiltroChanged()
+    {
+        paginaActual = 1;
+        StateHasChanged();
+    }
+
+    private void CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas)
+        {
+            paginaActual = nuevaPagina;
+            atencionExpandida = null; // Colapsar al cambiar de página
+            StateHasChanged();
+        }
+    }
+
+    private void OnItemsPorPaginaChanged()
+    {
+        paginaActual = 1;
+        atencionExpandida = null;
+        StateHasChanged();
+    }
+}

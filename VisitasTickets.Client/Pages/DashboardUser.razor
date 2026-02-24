@@ -272,11 +272,21 @@
 
     private List<MiAtencionModel> misAtenciones = new();
     private List<AccesoRapidoModel> accesosRapidos = new();
+    private bool initialized = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarDatos();
         CargarAccesosRapidos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !initialized)
+        {
+            initialized = true;
+            await CargarDatos();
+            StateHasChanged();
+        }
     }
 
     private async Task CargarDatos()

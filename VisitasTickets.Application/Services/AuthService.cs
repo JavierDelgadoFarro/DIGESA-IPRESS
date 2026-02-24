@@ -24,13 +24,25 @@ namespace VisitasTickets.Application.Services
         public async Task<string?> AuthenticateAsync(string username, string password)
         {
             var usuario = await _context.AdmUsuarios
+                .Include(u => u.IdPersonalNavigation)
                 .FirstOrDefaultAsync(u => u.NombreUsuarioUsu == username && u.ContrasenaUsu == password);
 
             if (usuario == null) return null;
 
+            // Obtener nombre completo del personal
+            string nombreCompleto = "Usuario";
+            if (usuario.IdPersonalNavigation != null)
+            {
+                var personal = usuario.IdPersonalNavigation;
+                nombreCompleto = !string.IsNullOrWhiteSpace(personal.ApellidosNombrePer)
+                    ? personal.ApellidosNombrePer
+                    : $"{personal.Nombre} {personal.Paterno} {personal.Materno}".Trim();
+            }
+
             var claims = new List<Claim>
             {
-                new Claim("UsuarioId", usuario.IdUsuario.ToString())
+                new Claim("UsuarioId", usuario.IdUsuario.ToString()),
+                new Claim(ClaimTypes.Name, nombreCompleto)
             };
 
             var keyValue = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");

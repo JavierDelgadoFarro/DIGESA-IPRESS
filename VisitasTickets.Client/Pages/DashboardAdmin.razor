@@ -3,6 +3,7 @@
 @layout MainLayout
 @inject AuthService AuthService
 @inject AtencionService AtencionService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
 @using VisitasTickets.Client.Services
 @using VisitasTickets.Domain.Dtos
 
@@ -288,17 +289,33 @@
     private EstadisticasDashboardDto? estadisticas;
     private List<ActividadRecienteModel> actividadesRecientes = new();
     private List<AccesoRapidoModel> accesosRapidos = new();
+    private bool datosYaCargados = false;
 
     protected override async Task OnInitializedAsync()
     {
         await CargarDatos();
         CargarAccesosRapidos();
+        datosYaCargados = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !datosYaCargados)
+        {
+            await CargarDatos();
+            CargarAccesosRapidos();
+            datosYaCargados = true;
+            StateHasChanged();
+        }
     }
 
     private async Task CargarDatos()
     {
         try
-        {
+        {            // Cargar nombre de usuario
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            nombreUsuario = user.Identity?.Name ?? "Administrador";
             // Cargar estad�sticas desde la API
             estadisticas = await AtencionService.GetEstadisticasDashboardAsync();
 

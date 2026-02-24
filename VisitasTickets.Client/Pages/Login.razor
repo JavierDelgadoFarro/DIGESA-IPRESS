@@ -188,7 +188,36 @@
             if (!string.IsNullOrEmpty(result.Token))
             {
                 ((CustomAuthStateProvider)AuthProvider).NotifyUserAuthentication(result.Token);
-                NavManager.NavigateTo("/principal", forceLoad: true);
+                
+                // Dar tiempo al AuthenticationStateProvider para actualizar el estado
+                await Task.Delay(100);
+                
+                // Obtener accesos del usuario y redirigir al dashboard correspondiente
+                var accesos = await AuthService.GetAccesosAsync();
+                string rutaDestino = "/principal"; // Ruta por defecto
+
+                if (accesos != null && accesos.Modulos != null)
+                {
+                    // Obtener todas las rutas a las que el usuario tiene acceso
+                    var rutasDisponibles = accesos.Modulos
+                        .SelectMany(m => m.Menus)
+                        .SelectMany(m => m.SubMenus)
+                        .Select(s => s.Ruta?.ToLower())
+                        .Where(r => !string.IsNullOrEmpty(r))
+                        .ToList();
+
+                    // Prioridad: dashboard/admin > dashboard/user > principal
+                    if (rutasDisponibles.Contains("/dashboard/admin"))
+                    {
+                        rutaDestino = "/dashboard/admin";
+                    }
+                    else if (rutasDisponibles.Contains("/dashboard/user"))
+                    {
+                        rutaDestino = "/dashboard/user";
+                    }
+                }
+
+                NavManager.NavigateTo(rutaDestino);
             }
             else
             {

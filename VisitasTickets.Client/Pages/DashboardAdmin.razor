@@ -2,7 +2,9 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @layout MainLayout
 @inject AuthService AuthService
+@inject AtencionService AtencionService
 @using VisitasTickets.Client.Services
+@using VisitasTickets.Domain.Dtos
 
 <PageTitle>Dashboard - Administrador</PageTitle>
 
@@ -10,7 +12,7 @@
     <!-- Header del Dashboard -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Dashboard de Administrador</h1>
+            <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p class="text-gray-600 mt-1">Bienvenido, <span class="font-semibold">@nombreUsuario</span></p>
         </div>
         <div class="flex items-center gap-4">
@@ -29,24 +31,24 @@
         </div>
     </div>
 
-    <!-- Tarjetas de Estadísticas Principales -->
+    <!-- Tarjetas de EstadÃ­sticas Principales -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Card 1: Usuarios Activos -->
+        <!-- Card 1: Total Usuarios -->
         <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
-                        <p class="text-sm font-semibold text-blue-800 uppercase tracking-wide">Usuarios Activos</p>
+                        <p class="text-sm font-semibold text-blue-800 uppercase tracking-wide">Total Usuarios</p>
                     </div>
-                    <p class="text-4xl font-bold text-gray-900 mb-3">@estadisticas.UsuariosActivos</p>
+                    <p class="text-4xl font-bold text-gray-900 mb-3">@(estadisticas?.TotalUsuarios ?? 0)</p>
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 text-sm font-medium text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                        <span class="inline-flex items-center gap-1 text-sm font-medium text-blue-700 bg-blue-200 px-2 py-1 rounded-full">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"></path>
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
                             </svg>
-                            +@estadisticas.CrecimientoUsuarios%
+                            Sistema
                         </span>
-                        <span class="text-xs text-gray-600">vs mes anterior</span>
+                        <span class="text-xs text-gray-600">usuarios registrados</span>
                     </div>
                 </div>
                 <div class="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
@@ -64,15 +66,15 @@
                     <div class="flex items-center gap-2 mb-2">
                         <p class="text-sm font-semibold text-amber-800 uppercase tracking-wide">Atenciones Pendientes</p>
                     </div>
-                    <p class="text-4xl font-bold text-gray-900 mb-3">@estadisticas.AtencionesPendientes</p>
+                    <p class="text-4xl font-bold text-gray-900 mb-3">@(estadisticas?.AtencionesPendientes ?? 0)</p>
                     <div class="flex items-center gap-2">
                         <span class="inline-flex items-center gap-1 text-sm font-medium text-amber-700 bg-amber-200 px-2 py-1 rounded-full">
                             <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
                             </svg>
-                            Urgente
+                            En espera
                         </span>
-                        <span class="text-xs text-gray-600">Requieren atención</span>
+                        <span class="text-xs text-gray-600">@(estadisticas?.AtencionesPreferenciales ?? 0) preferencial(es)</span>
                     </div>
                 </div>
                 <div class="w-20 h-20 bg-amber-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
@@ -83,59 +85,58 @@
             </div>
         </div>
 
-        <!-- Card 3: Último Acceso -->
+        <!-- Card 3: Atenciones en Ventanilla -->
         <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-lg p-6 border-l-4 border-green-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
-                        <p class="text-sm font-semibold text-green-800 uppercase tracking-wide">Último Acceso</p>
+                        <p class="text-sm font-semibold text-green-800 uppercase tracking-wide">En Ventanilla</p>
                     </div>
-                    <p class="text-2xl font-bold text-gray-900 mb-1">@estadisticas.UltimoAcceso</p>
-                    <p class="text-sm text-gray-700 mb-2">@estadisticas.UsuarioUltimoAcceso</p>
+                    <p class="text-4xl font-bold text-gray-900 mb-3">@(estadisticas?.AtencionesEnVentanilla ?? 0)</p>
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 text-sm font-medium text-green-700 bg-green-200 px-2 py-1 rounded-full">
+                        <span class="inline-flex items-center gap-1 text-sm font-medium text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                             </svg>
-                            Online
+                            @(estadisticas?.AtencionesEnPausa ?? 0) en pausa
                         </span>
                     </div>
                 </div>
                 <div class="w-20 h-20 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                     </svg>
                 </div>
             </div>
         </div>
 
-        <!-- Card 4: Visitas Totales -->
+        <!-- Card 4: Atenciones del Mes -->
         <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-lg p-6 border-l-4 border-purple-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
-                        <p class="text-sm font-semibold text-purple-800 uppercase tracking-wide">Visitas Totales</p>
+                        <p class="text-sm font-semibold text-purple-800 uppercase tracking-wide">Atenciones del Mes</p>
                     </div>
-                    <p class="text-4xl font-bold text-gray-900 mb-3">@estadisticas.VisitasTotales</p>
+                    <p class="text-4xl font-bold text-gray-900 mb-3">@(estadisticas?.AtencionesMes ?? 0)</p>
                     <div class="flex items-center gap-2">
                         <span class="inline-flex items-center gap-1 text-sm font-medium text-purple-700 bg-purple-200 px-2 py-1 rounded-full">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path>
                             </svg>
-                            Este mes
+                            Hoy: @(estadisticas?.AtencionesHoy ?? 0)
                         </span>
                     </div>
                 </div>
                 <div class="w-20 h-20 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                     </svg>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sección de Gráficos y Actividad -->
+    <!-- SecciÃ³n de Grï¿½ficos y Actividad -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Actividad Reciente con Timeline -->
         <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
@@ -146,16 +147,16 @@
                     </svg>
                     Actividad Reciente
                 </h2>
-                <button class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 hover:gap-2 transition-all">
+                <a href="/atenciones/atendidos" class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 hover:gap-2 transition-all">
                     Ver todo
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
-                </button>
+                </a>
             </div>
             
             <div class="relative">
-                <!-- Línea vertical del timeline -->
+                <!-- Lï¿½nea vertical del timeline -->
                 <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
                 
                 <div class="space-y-6">
@@ -203,7 +204,7 @@
                                                 </svg>
                                                 @actividad.TiempoTranscurrido
                                             </span>
-                                            <span class="text-xs text-gray-400">•</span>
+                                            <span class="text-xs text-gray-400">ï¿½</span>
                                             <span class="text-xs text-gray-500">@actividad.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
                                         </div>
                                     </div>
@@ -228,13 +229,13 @@
             }
         </div>
 
-        <!-- Accesos Rápidos -->
+        <!-- Accesos RÃ¡pidos -->
         <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
             <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
-                Accesos Rápidos
+                Accesos RÃ¡pidos
             </h2>
             <div class="space-y-3">
                 @foreach (var acceso in accesosRapidos)
@@ -255,54 +256,8 @@
                     </a>
                 }
             </div>
-
-            <!-- Botón de Ayuda -->
-            <div class="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border-2 border-indigo-100">
-                <div class="flex items-start gap-3">
-                    <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-gray-900">¿Necesitas ayuda?</p>
-                        <p class="text-xs text-gray-600 mt-1">Consulta la documentación o contacta con soporte</p>
-                        <button class="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
-                            Ver guía
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>  
-
-    <!-- Notificación de Sistema -->
-    @if (mostrarNotificacion)
-    {
-        <div class="bg-gradient-to-r from-blue-50 via-blue-100 to-blue-50 rounded-xl shadow-lg p-6 border-l-4 border-blue-600 animate-slideInUp">
-            <div class="flex items-start gap-4">
-                <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 animate-bounce">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <h3 class="text-lg font-bold text-gray-900">Sistema actualizado correctamente</h3>
-                    <p class="text-gray-700 mt-1">Nueva versión v2.3.0 disponible con mejoras de rendimiento y nuevas funcionalidades. 
-                        <a href="#" class="text-blue-600 hover:text-blue-800 font-medium underline">Más información</a>
-                    </p>
-                </div>
-                <button @onclick="() => mostrarNotificacion = false" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                    </svg>
-                </button>
-            </div>
-        </div>
-    }
 </div>
 
 <!-- Estilos personalizados -->
@@ -327,83 +282,110 @@
 </style>
 
 @code {
-    // DATOS SIMULADOS - Fácilmente reemplazables por llamadas a la API
     private string nombreUsuario = "Administrador";
     private bool isRefreshing = false;
-    private bool mostrarNotificacion = true;
 
-    // Modelo de estadísticas
-    private EstadisticasModel estadisticas = new();
+    private EstadisticasDashboardDto? estadisticas;
     private List<ActividadRecienteModel> actividadesRecientes = new();
     private List<AccesoRapidoModel> accesosRapidos = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        CargarDatosSimulados();
+        await CargarDatos();
+        CargarAccesosRapidos();
     }
 
-    private void CargarDatosSimulados()
+    private async Task CargarDatos()
     {
-        // MOCK DATA - Estadísticas
-        estadisticas = new EstadisticasModel
+        try
         {
-            UsuariosActivos = 120,
-            CrecimientoUsuarios = 12,
-            AtencionesPendientes = 35,
-            UltimoAcceso = "Hoy 10:30 AM",
-            UsuarioUltimoAcceso = "María González",
-            VisitasTotales = 540
-        };
+            // Cargar estadï¿½sticas desde la API
+            estadisticas = await AtencionService.GetEstadisticasDashboardAsync();
 
-        // MOCK DATA - Actividades Recientes
-        actividadesRecientes = new List<ActividadRecienteModel>
+            // Cargar actividades recientes (ï¿½ltimas atenciones completadas)
+            await CargarActividadesRecientes();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
         {
-            new() { Usuario = "Juan Pérez", Descripcion = "Ingresó al sistema desde la aplicación móvil", Fecha = DateTime.Now.AddMinutes(-5), Estado = "Completado", Tipo = "usuario", TiempoTranscurrido = "Hace 5 minutos" },
-            new() { Usuario = "María González", Descripcion = "Registró una nueva visita para el área de TI", Fecha = DateTime.Now.AddMinutes(-12), Estado = "En Proceso", Tipo = "visita", TiempoTranscurrido = "Hace 12 minutos" },
-            new() { Usuario = "Carlos Ruiz", Descripcion = "Creó un ticket de soporte técnico #1534", Fecha = DateTime.Now.AddMinutes(-25), Estado = "Pendiente", Tipo = "ticket", TiempoTranscurrido = "Hace 25 minutos" },
-            new() { Usuario = "Ana Martínez", Descripcion = "Actualizó la información del perfil de usuario", Fecha = DateTime.Now.AddMinutes(-40), Estado = "Completado", Tipo = "usuario", TiempoTranscurrido = "Hace 40 minutos" },
-            new() { Usuario = "Luis Fernández", Descripcion = "Generó el reporte mensual de atenciones", Fecha = DateTime.Now.AddHours(-1), Estado = "Completado", Tipo = "reporte", TiempoTranscurrido = "Hace 1 hora" },
-            new() { Usuario = "Patricia Silva", Descripcion = "Cerró el ticket de soporte #1532", Fecha = DateTime.Now.AddHours(-2), Estado = "Completado", Tipo = "ticket", TiempoTranscurrido = "Hace 2 horas" }
-        };
+            Console.WriteLine($"Error al cargar datos del dashboard: {ex.Message}");
+        }
+    }
 
-        // MOCK DATA - Accesos Rápidos
+    private async Task CargarActividadesRecientes()
+    {
+        try
+        {
+            // Obtener las ï¿½ltimas 6 atenciones completadas
+            var atenciones = await AtencionService.GetAtencionesHistorialAsync();
+            
+            actividadesRecientes = atenciones
+                .Where(a => a.NombreEstado == "Atendido")
+                .OrderByDescending(a => a.FechaRegistro)
+                .Take(3)
+                .Select(a => new ActividadRecienteModel
+                {
+                    Usuario = a.NombreCompleto ?? "Usuario",
+                    Descripcion = $"AtenciÃ³n de {a.NombreTramite ?? "trÃ¡mite"} finalizada",
+                    Fecha = a.FechaRegistro,
+                    Estado = "Atendido",
+                    Tipo = a.EsPreferencial ? "preferencial" : "ticket",
+                    TiempoTranscurrido = CalcularTiempoTranscurrido(a.FechaRegistro)
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar actividades recientes: {ex.Message}");
+            actividadesRecientes = new List<ActividadRecienteModel>();
+        }
+    }
+
+    private void CargarAccesosRapidos()
+    {
         accesosRapidos = new List<AccesoRapidoModel>
         {
-            new() { Nombre = "Gestión de Usuarios", Descripcion = "Administrar usuarios del sistema", Ruta = "/usuarios", ColorFondo = "bg-blue-100", ColorIcono = "text-blue-600", ColorHover = "hover:bg-blue-50", ColorTexto = "text-blue-600", IconoPath = "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
-            new() { Nombre = "Tickets de Soporte", Descripcion = "Ver y gestionar tickets", Ruta = "/tickets", ColorFondo = "bg-amber-100", ColorIcono = "text-amber-600", ColorHover = "hover:bg-amber-50", ColorTexto = "text-amber-600", IconoPath = "M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" },
-            new() { Nombre = "Registro de Visitas", Descripcion = "Control de acceso", Ruta = "/visitas", ColorFondo = "bg-green-100", ColorIcono = "text-green-600", ColorHover = "hover:bg-green-50", ColorTexto = "text-green-600", IconoPath = "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
-            new() { Nombre = "Reportes y Análisis", Descripcion = "Estadísticas detalladas", Ruta = "/reportes", ColorFondo = "bg-purple-100", ColorIcono = "text-purple-600", ColorHover = "hover:bg-purple-50", ColorTexto = "text-purple-600", IconoPath = "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-            new() { Nombre = "Configuración", Descripcion = "Ajustes del sistema", Ruta = "/configuracion", ColorFondo = "bg-gray-100", ColorIcono = "text-gray-600", ColorHover = "hover:bg-gray-50", ColorTexto = "text-gray-600", IconoPath = "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z" }
+            new() { Nombre = "GestiÃ³n de Usuarios", Descripcion = "Administrar usuarios del sistema", Ruta = "/usuarios", ColorFondo = "bg-blue-100", ColorIcono = "text-blue-600", ColorHover = "hover:bg-blue-50", ColorTexto = "text-blue-600", IconoPath = "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
+            new() { Nombre = "Atenciones Pendientes", Descripcion = "Ver atenciones en espera", Ruta = "/atenciones/pendientes", ColorFondo = "bg-amber-100", ColorIcono = "text-amber-600", ColorHover = "hover:bg-amber-50", ColorTexto = "text-amber-600", IconoPath = "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+            new() { Nombre = "Atenciones Completadas", Descripcion = "Historial de atenciones", Ruta = "/atenciones/atendidos", ColorFondo = "bg-green-100", ColorIcono = "text-green-600", ColorHover = "hover:bg-green-50", ColorTexto = "text-green-600", IconoPath = "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
         };
     }
 
-    // PREPARADO PARA API - Método que se puede reemplazar fácilmente
     private async Task RefreshData()
     {
         isRefreshing = true;
         StateHasChanged();
 
-        // Simular llamada a la API
-        await Task.Delay(1000);
-
-        // TODO: Reemplazar con llamada real a la API
-        // estadisticas = await AuthService.GetEstadisticasAsync();
-        // actividadesRecientes = await AuthService.GetActividadesRecientesAsync();
-
-        // Por ahora, recargar datos simulados
-        CargarDatosSimulados();
+        await CargarDatos();
 
         isRefreshing = false;
         StateHasChanged();
     }
 
-    // Métodos auxiliares para estilos dinámicos
+    private string CalcularTiempoTranscurrido(DateTime fecha)
+    {
+        var diferencia = DateTime.Now - fecha;
+        
+        if (diferencia.TotalMinutes < 1)
+            return "Hace unos segundos";
+        if (diferencia.TotalMinutes < 60)
+            return $"Hace {(int)diferencia.TotalMinutes} minuto{((int)diferencia.TotalMinutes != 1 ? "s" : "")}";
+        if (diferencia.TotalHours < 24)
+            return $"Hace {(int)diferencia.TotalHours} hora{((int)diferencia.TotalHours != 1 ? "s" : "")}";
+        if (diferencia.TotalDays < 7)
+            return $"Hace {(int)diferencia.TotalDays} dÃ­a{((int)diferencia.TotalDays != 1 ? "s" : "")}";
+        
+        return fecha.ToString("dd/MM/yyyy");
+    }
+
     private string GetColorClass(string tipo) => tipo switch
     {
         "usuario" => "bg-blue-600",
         "ticket" => "bg-amber-600",
+        "preferencial" => "bg-purple-600",
         "visita" => "bg-green-600",
-        "reporte" => "bg-purple-600",
+        "reporte" => "bg-indigo-600",
         _ => "bg-gray-600"
     };
 
@@ -414,17 +396,6 @@
         "Pendiente" => "bg-amber-100 text-amber-800",
         _ => "bg-gray-100 text-gray-800"
     };
-
-    // MODELOS - Listos para mapear con DTOs de la API
-    private class EstadisticasModel
-    {
-        public int UsuariosActivos { get; set; }
-        public int CrecimientoUsuarios { get; set; }
-        public int AtencionesPendientes { get; set; }
-        public string UltimoAcceso { get; set; } = string.Empty;
-        public string UsuarioUltimoAcceso { get; set; } = string.Empty;
-        public int VisitasTotales { get; set; }
-    }
 
     private class ActividadRecienteModel
     {

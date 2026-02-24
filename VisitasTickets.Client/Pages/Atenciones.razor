@@ -667,7 +667,8 @@
                 query = query.Where(a => !a.EsPreferencial);
             }
 
-            return query;
+            return query.OrderByDescending(a => a.EsPreferencial)
+                        .ThenBy(a => a.FechaRegistro);
         }
     }
 

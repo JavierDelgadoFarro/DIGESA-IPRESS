@@ -18,7 +18,7 @@ namespace VisitasTickets.Domain.Entities
 
         public string? Observacion { get; set; }
 
-        public int? TiempoEnEstadoAnterior { get; set; } // En minutos
+        public int? TiempoEnEstadoAnterior { get; set; } // En segundos
 
         // Navegación
         public virtual UtdAtencion IdAtencionNavigation { get; set; } = null!;

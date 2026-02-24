@@ -83,5 +83,23 @@ namespace VisitasTickets.Client.Services
         {
             return await _http.GetFromJsonAsync<TiempoActivoDto>($"api/atenciones/{idAtencion}/tiempo-activo");
         }
+
+        // Obtener estadísticas para dashboard del administrador
+        public async Task<EstadisticasDashboardDto?> GetEstadisticasDashboardAsync()
+        {
+            return await _http.GetFromJsonAsync<EstadisticasDashboardDto>("api/dashboard/estadisticas");
+        }
+
+        // Obtener estadísticas para dashboard del usuario
+        public async Task<EstadisticasUsuarioDto?> GetEstadisticasUsuarioAsync()
+        {
+            return await _http.GetFromJsonAsync<EstadisticasUsuarioDto>("api/dashboardusuario/estadisticas");
+        }
+
+        // Obtener mis atenciones completadas hoy
+        public async Task<List<AtencionDto>> GetMisAtencionesHoyAsync()
+        {
+            return await _http.GetFromJsonAsync<List<AtencionDto>>("api/dashboardusuario/mis-atenciones/hoy") ?? new List<AtencionDto>();
+        }
     }
 }

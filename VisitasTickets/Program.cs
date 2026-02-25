@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using VisitasTickets.Application.Services;
 using VisitasTickets.Infrastructure.Persistence;
+using VisitasTickets.API.Hubs;
 
 namespace VisitasTickets
 {
@@ -14,7 +15,7 @@ namespace VisitasTickets
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Registrar DbContext con la cadena de conexión
+            // Registrar DbContext con la cadena de conexiï¿½n
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -53,6 +54,10 @@ namespace VisitasTickets
 
 
             builder.Services.AddScoped<AuthService>();
+            builder.Services.AddScoped<SignalRNotificationService>();
+
+            // Configurar SignalR
+            builder.Services.AddSignalR();
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -69,6 +74,22 @@ namespace VisitasTickets
                             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
                         )
                     };
+
+                    // Configurar autenticaciÃ³n para SignalR
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
                 });
 
             builder.Services.AddAuthorization();
@@ -78,7 +99,8 @@ namespace VisitasTickets
                 options.AddPolicy("AllowClient",
                     policy => policy.WithOrigins("https://localhost:7236")
                                     .AllowAnyHeader()
-                                    .AllowAnyMethod());
+                                    .AllowAnyMethod()
+                                    .AllowCredentials()); // Requerido para SignalR
             });
 
             var app = builder.Build();
@@ -95,6 +117,10 @@ namespace VisitasTickets
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
+            
+            // Mapear el Hub de SignalR
+            app.MapHub<AtencionHub>("/hubs/atenciones");
+            
             app.Run();
         }
     }

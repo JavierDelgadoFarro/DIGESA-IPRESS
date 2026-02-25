@@ -3,9 +3,11 @@
 @layout MainLayout
 @inject AuthService AuthService
 @inject AtencionService AtencionService
+@inject SignalRService SignalRService
 @inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
 @using VisitasTickets.Client.Services
 @using VisitasTickets.Domain.Dtos
+@implements IDisposable
 
 <PageTitle>Dashboard - Administrador</PageTitle>
 
@@ -296,6 +298,26 @@
         await CargarDatos();
         CargarAccesosRapidos();
         datosYaCargados = true;
+
+        // Asegurar que SignalR esté conectado
+        if (!SignalRService.IsConnected)
+        {
+            Console.WriteLine("DashboardAdmin: SignalR no conectado, iniciando conexión...");
+            await SignalRService.IniciarConexionAsync();
+        }
+
+        Console.WriteLine($"DashboardAdmin: Estado de conexión SignalR: {SignalRService.IsConnected}");
+
+        // Suscribirse a eventos de SignalR
+        SignalRService.OnActualizacionDashboard += async () =>
+        {
+            Console.WriteLine("DashboardAdmin: Evento OnActualizacionDashboard recibido");
+            await InvokeAsync(async () =>
+            {
+                await CargarDatos();
+                StateHasChanged();
+            });
+        };
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -434,5 +456,10 @@
         public string ColorHover { get; set; } = string.Empty;
         public string ColorTexto { get; set; } = string.Empty;
         public string IconoPath { get; set; } = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        // Desuscribirse de eventos SignalR
     }
 }

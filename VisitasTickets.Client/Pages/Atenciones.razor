@@ -7,6 +7,8 @@
 @using VisitasTickets.Domain.Dtos
 @inject AtencionService AtencionService
 @inject NotificationService NotificationService
+@inject SignalRService SignalRService
+@implements IDisposable
 
 <PageTitle>Atenciones - Sistema de Atenciones</PageTitle>
 
@@ -302,6 +304,37 @@
     protected override async Task OnInitializedAsync()
     {
         await CargarDatos();
+
+        // Asegurar que SignalR esté conectado antes de suscribirse
+        if (!SignalRService.IsConnected)
+        {
+            Console.WriteLine("Atenciones: SignalR no conectado, iniciando conexión...");
+            await SignalRService.IniciarConexionAsync();
+        }
+
+        Console.WriteLine($"Atenciones: Estado de conexión SignalR: {SignalRService.IsConnected}");
+
+        // Suscribirse a eventos de SignalR para actualizaciones en tiempo real
+        SignalRService.OnNuevaAtencion += async () =>
+        {
+            Console.WriteLine("Atenciones: Evento OnNuevaAtencion recibido");
+            await InvokeAsync(async () =>
+            {
+                await CargarAtenciones();
+                NotificationService.ShowSuccess("¡Nueva atención registrada!");
+                StateHasChanged();
+            });
+        };
+
+        SignalRService.OnCambioEstadoAtencion += async (idAtencion) =>
+        {
+            Console.WriteLine($"Atenciones: Evento OnCambioEstadoAtencion recibido para ID: {idAtencion}");
+            await InvokeAsync(async () =>
+            {
+                await CargarAtenciones();
+                StateHasChanged();
+            });
+        };
     }
 
     private async Task CargarDatos()
@@ -716,5 +749,24 @@
             "Atendido" => "🟢",
             _ => "⚪"
         };
+    }
+
+    private async Task CargarAtenciones()
+    {
+        try
+        {
+            atenciones = await AtencionService.GetAtencionesActivasAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cargar atenciones: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        // Desuscribirse de eventos SignalR
+        SignalRService.OnNuevaAtencion -= async () => await CargarAtenciones();
+        SignalRService.OnCambioEstadoAtencion -= async (idAtencion) => await CargarAtenciones();
     }
 }

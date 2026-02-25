@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using VisitasTickets.Client.Services;
+using VisitasTickets.Client.Globals;
 
 namespace VisitasTickets.Client
 {
@@ -16,7 +17,7 @@ namespace VisitasTickets.Client
 
             builder.Services.AddScoped(sp => new HttpClient
             {
-                BaseAddress = new Uri("https://localhost:7248/")
+                BaseAddress = new Uri($"{AppConfig.ApiBaseUrl}/")
             });
 
             builder.Services.AddBlazoredLocalStorage();
@@ -27,6 +28,7 @@ namespace VisitasTickets.Client
             builder.Services.AddScoped<UsuarioService>();
             builder.Services.AddScoped<AtencionService>();
             builder.Services.AddSingleton<NotificationService>();
+            builder.Services.AddScoped<SignalRService>();
 
             await builder.Build().RunAsync();
         }

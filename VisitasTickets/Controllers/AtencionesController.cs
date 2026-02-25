@@ -5,6 +5,7 @@ using System.Security.Claims;
 using VisitasTickets.Domain.Dtos;
 using VisitasTickets.Domain.Entities;
 using VisitasTickets.Infrastructure.Persistence;
+using VisitasTickets.API.Hubs;
 
 namespace VisitasTickets.API.Controllers
 {
@@ -14,10 +15,12 @@ namespace VisitasTickets.API.Controllers
     public class AtencionesController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly SignalRNotificationService _notificationService;
 
-        public AtencionesController(AppDbContext context)
+        public AtencionesController(AppDbContext context, SignalRNotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         // GET: api/atenciones - Obtener todas las atenciones
@@ -245,6 +248,10 @@ namespace VisitasTickets.API.Controllers
             _context.UtdHistorialAtencions.Add(historialInicial);
             await _context.SaveChangesAsync();
 
+            // Notificar a todos los clientes sobre la nueva atención
+            await _notificationService.NotificarNuevaAtencion();
+            await _notificationService.NotificarActualizacionDashboard();
+
             // Cargar las navegaciones para devolver el DTO completo
             await _context.Entry(atencion).Reference(a => a.IdTipoTramiteNavigation).LoadAsync();
             await _context.Entry(atencion).Reference(a => a.IdEstadoAtencionNavigation).LoadAsync();
@@ -350,6 +357,10 @@ namespace VisitasTickets.API.Controllers
                 _context.UtdHistorialAtencions.Add(historial);
 
                 await _context.SaveChangesAsync();
+
+                // Notificar a todos los clientes sobre el cambio de estado
+                await _notificationService.NotificarCambioEstadoAtencion(id);
+                await _notificationService.NotificarActualizacionDashboard();
 
                 return NoContent();
             }

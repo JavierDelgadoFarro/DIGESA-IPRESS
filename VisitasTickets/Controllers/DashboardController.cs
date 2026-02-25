@@ -75,51 +75,56 @@ namespace VisitasTickets.API.Controllers
                     .OrderByDescending(a => a.FechaRegistro)
                     .FirstOrDefaultAsync();
 
-                // Calcular tiempo promedio de atención (en minutos) para atenciones completadas hoy
-                var atencionesCompletadasHoy = await _context.UtdAtencions
+                // Calcular tiempo promedio de atención (en minutos) para TODAS las atenciones completadas
+                var atencionesCompletadas = await _context.UtdAtencions
                     .Include(a => a.IdEstadoAtencionNavigation)
-                    .Where(a => a.IdEstadoAtencionNavigation.NombreEstado == "Atendido" 
-                        && a.FechaRegistro >= inicioHoy 
-                        && a.FechaRegistro < finHoy)
+                    .Where(a => a.IdEstadoAtencionNavigation.NombreEstado == "Atendido")
                     .ToListAsync();
 
                 decimal tiempoPromedioMinutos = 0;
-                if (atencionesCompletadasHoy.Any())
+                if (atencionesCompletadas.Any())
                 {
-                    var tiemposTotales = new List<int>();
-                    foreach (var atencion in atencionesCompletadasHoy)
-                    {
-                        // Obtener historial de estados para esta atención
-                        var historial = await _context.UtdHistorialAtencions
-                            .Include(h => h.IdEstadoNuevoNavigation)
-                            .Where(h => h.IdAtencion == atencion.IdAtencion)
-                            .OrderBy(h => h.FechaCambio)
-                            .ToListAsync();
+                    // Obtener el estado "En Ventanilla"
+                    var estadoVentanilla = await _context.UtdEstadoAtencions
+                        .FirstOrDefaultAsync(e => e.NombreEstado == "En Ventanilla");
 
-                        // Calcular tiempo total excluyendo pausas (orden != 3)
-                        int tiempoTotalSegundos = 0;
-                        for (int i = 0; i < historial.Count - 1; i++)
+                    if (estadoVentanilla != null)
+                    {
+                        var tiemposTotales = new List<int>();
+                        foreach (var atencion in atencionesCompletadas)
                         {
-                            var actual = historial[i];
-                            var siguiente = historial[i + 1];
-                            
-                            // Solo contar si NO es pausa (orden != 3)
-                            if (actual.IdEstadoNuevoNavigation?.Orden != 3)
+                            // Obtener historial de estados para esta atención
+                            var historial = await _context.UtdHistorialAtencions
+                                .Where(h => h.IdAtencion == atencion.IdAtencion)
+                                .OrderBy(h => h.FechaCambio)
+                                .ToListAsync();
+
+                            // Calcular solo el tiempo EN VENTANILLA (cuando está siendo atendido)
+                            int tiempoEnVentanillaSegundos = 0;
+                            for (int i = 0; i < historial.Count - 1; i++)
                             {
-                                tiempoTotalSegundos += actual.TiempoEnEstadoAnterior ?? 0;
+                                var actual = historial[i];
+                                var siguiente = historial[i + 1];
+                                
+                                // Si el estado actual es "En Ventanilla", el TiempoEnEstadoAnterior del siguiente
+                                // registro indica cuánto tiempo estuvo EN VENTANILLA
+                                if (actual.IdEstadoNuevo == estadoVentanilla.IdEstadoAtencion)
+                                {
+                                    tiempoEnVentanillaSegundos += siguiente.TiempoEnEstadoAnterior ?? 0;
+                                }
+                            }
+
+                            if (tiempoEnVentanillaSegundos > 0)
+                            {
+                                tiemposTotales.Add(tiempoEnVentanillaSegundos);
                             }
                         }
 
-                        if (tiempoTotalSegundos > 0)
+                        if (tiemposTotales.Any())
                         {
-                            tiemposTotales.Add(tiempoTotalSegundos);
+                            var promedioSegundos = tiemposTotales.Average();
+                            tiempoPromedioMinutos = Math.Round((decimal)(promedioSegundos / 60), 2);
                         }
-                    }
-
-                    if (tiemposTotales.Any())
-                    {
-                        var promedioSegundos = tiemposTotales.Average();
-                        tiempoPromedioMinutos = Math.Round((decimal)(promedioSegundos / 60), 2);
                     }
                 }
 

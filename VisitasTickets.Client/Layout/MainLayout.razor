@@ -3,6 +3,7 @@
 @inject NavigationManager NavManager
 @inject AuthenticationStateProvider AuthProvider
 @inject ILocalStorageService _localStorage
+@inject SignalRService SignalRService
 @using Microsoft.AspNetCore.Components.Authorization
 @using Blazored.LocalStorage
 @using VisitasTickets.Client.Services
@@ -169,6 +170,11 @@
             Accesos = await AuthService.GetAccesosAsync();
             currentPath = NavManager.ToBaseRelativePath(NavManager.Uri);
             NavManager.LocationChanged += OnLocationChanged;
+
+            // Iniciar conexión SignalR
+            Console.WriteLine("MainLayout: Iniciando conexión SignalR...");
+            await SignalRService.IniciarConexionAsync();
+            Console.WriteLine($"MainLayout: Estado de conexión SignalR: {SignalRService.IsConnected}");
         }
         catch (Exception ex)
         {
@@ -195,6 +201,9 @@
 
     private async Task Logout()
     {
+        // Detener conexión SignalR antes de cerrar sesión
+        await SignalRService.DetenerConexionAsync();
+        
         await _localStorage.RemoveItemAsync("authToken");
         ((CustomAuthStateProvider)AuthProvider).NotifyUserLogout();
         NavManager.NavigateTo("/login", forceLoad: true);
@@ -239,5 +248,6 @@
     public void Dispose()
     {
         NavManager.LocationChanged -= OnLocationChanged;
+        // El SignalRService se limpiará automáticamente al ser Singleton con IAsyncDisposable
     }
 }

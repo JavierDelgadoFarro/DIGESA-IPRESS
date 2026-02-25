@@ -6,6 +6,7 @@
 @inject NavigationManager NavManager
 @inject AuthenticationStateProvider AuthProvider
 @inject ILocalStorageService _localStorage
+@inject SignalRService SignalRService
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
 @using Blazored.LocalStorage
@@ -191,6 +192,9 @@
                 
                 // Dar tiempo al AuthenticationStateProvider para actualizar el estado
                 await Task.Delay(100);
+                
+                // Iniciar conexión SignalR
+                await SignalRService.IniciarConexionAsync();
                 
                 // Obtener accesos del usuario y redirigir al dashboard correspondiente
                 var accesos = await AuthService.GetAccesosAsync();

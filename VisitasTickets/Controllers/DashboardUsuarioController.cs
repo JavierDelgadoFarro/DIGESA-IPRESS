@@ -106,9 +106,9 @@ namespace VisitasTickets.API.Controllers
                 // Total
                 var totalAtenciones = idsAtendidas.Count;
 
-                // Calcular tiempo promedio (atenciones atendidas HOY)
+                // Calcular tiempo promedio (TODAS las atenciones atendidas, no solo hoy)
                 string tiempoPromedioFormateado = "0min";
-                if (idsAtendidasHoy.Any())
+                if (idsAtendidas.Any())
                 {
                     // Obtener el estado "En Ventanilla"
                     var estadoVentanilla = estados.FirstOrDefault(e => e.NombreEstado == "En Ventanilla");
@@ -120,7 +120,7 @@ namespace VisitasTickets.API.Controllers
                     else
                     {
                         var tiemposTotales = new List<int>();
-                        foreach (var idAtencion in idsAtendidasHoy)
+                        foreach (var idAtencion in idsAtendidas)
                         {
                             var historialAtencion = historialCompleto
                                 .Where(h => h.IdAtencion == idAtencion)

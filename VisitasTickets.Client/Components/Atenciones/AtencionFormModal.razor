@@ -20,8 +20,8 @@
             <div class="p-6 space-y-6">
                 @if (!string.IsNullOrEmpty(ErrorMessage))
                 {
-                    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-                        <p class="text-sm text-red-700 font-medium">@ErrorMessage</p>
+                    <div class="bg-rose-50 border-l-4 border-rose-600 p-4 rounded-r-lg">
+                        <p class="text-sm text-rose-700 font-medium">@ErrorMessage</p>
                     </div>
                 }
 
@@ -134,7 +134,7 @@
                         </div>
 
                         <!-- Atención Preferencial -->
-                        <div class="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+                        <div class="bg-amber-50 border-2 border-amber-100 rounded-lg p-4">
                             <label class="flex items-center cursor-pointer">
                                 <input type="checkbox"
                                        checked="@EsPreferencial"
@@ -162,13 +162,13 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200">
+                <div class="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
                     <button @onclick="Cerrar"
-                            class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                            class="px-6 py-3 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 active:scale-95 transition-all">
                         Cancelar
                     </button>
                     <button @onclick="Guardar"
-                            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-900 transition-all shadow-lg hover:shadow-xl">
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 active:scale-95 transition-all shadow-sm">
                         Registrar Atención
                     </button>
                 </div>

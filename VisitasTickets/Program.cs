@@ -97,7 +97,7 @@ namespace VisitasTickets
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowClient",
-                    policy => policy.WithOrigins("https://localhost:7236")
+                    policy => policy.SetIsOriginAllowed(origin => true) // Permite cualquier origen en desarrollo
                                     .AllowAnyHeader()
                                     .AllowAnyMethod()
                                     .AllowCredentials()); // Requerido para SignalR
@@ -118,8 +118,9 @@ namespace VisitasTickets
             app.UseAuthorization();
             app.MapControllers();
             
-            // Mapear el Hub de SignalR
+            // Mapear los Hubs de SignalR
             app.MapHub<AtencionHub>("/hubs/atenciones");
+            app.MapHub<VisitanteHub>("/hubs/visitantes"); // Hub público para visitantes
             
             app.Run();
         }

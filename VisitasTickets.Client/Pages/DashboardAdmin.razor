@@ -89,11 +89,11 @@
         </div>
 
         <!-- Card 3: Atenciones en Ventanilla -->
-        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-lg p-6 border-l-4 border-green-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer">
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl shadow-lg p-6 border-l-4 border-emerald-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
-                        <p class="text-sm font-semibold text-green-800 uppercase tracking-wide">En Ventanilla</p>
+                        <p class="text-sm font-semibold text-emerald-700 uppercase tracking-wide">En Ventanilla</p>
                     </div>
                     <p class="text-4xl font-bold text-gray-900 mb-3">@(estadisticas?.AtencionesEnVentanilla ?? 0)</p>
                     <div class="flex items-center gap-2">
@@ -105,7 +105,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="w-20 h-20 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
+                <div class="w-20 h-20 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                     </svg>
@@ -386,8 +386,8 @@
         accesosRapidos = new List<AccesoRapidoModel>
         {
             new() { Nombre = "Gestión de Usuarios", Descripcion = "Administrar usuarios del sistema", Ruta = "/usuarios", ColorFondo = "bg-blue-100", ColorIcono = "text-blue-600", ColorHover = "hover:bg-blue-50", ColorTexto = "text-blue-600", IconoPath = "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
-            new() { Nombre = "Atenciones Pendientes", Descripcion = "Ver atenciones en espera", Ruta = "/atenciones/pendientes", ColorFondo = "bg-amber-100", ColorIcono = "text-amber-600", ColorHover = "hover:bg-amber-50", ColorTexto = "text-amber-600", IconoPath = "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
-            new() { Nombre = "Atenciones Completadas", Descripcion = "Historial de atenciones", Ruta = "/atenciones/atendidos", ColorFondo = "bg-green-100", ColorIcono = "text-green-600", ColorHover = "hover:bg-green-50", ColorTexto = "text-green-600", IconoPath = "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
+            new() { Nombre = "Atenciones Pendientes", Descripcion = "Ver atenciones en espera", Ruta = "/atenciones/pendientes", ColorFondo = "bg-amber-50", ColorIcono = "text-amber-600", ColorHover = "hover:bg-amber-50", ColorTexto = "text-amber-600", IconoPath = "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+            new() { Nombre = "Atenciones Completadas", Descripcion = "Historial de atenciones", Ruta = "/atenciones/atendidos", ColorFondo = "bg-emerald-50", ColorIcono = "text-emerald-600", ColorHover = "hover:bg-emerald-50", ColorTexto = "text-emerald-600", IconoPath = "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
         };
     }
 
@@ -423,17 +423,17 @@
         "usuario" => "bg-blue-600",
         "ticket" => "bg-amber-600",
         "preferencial" => "bg-purple-600",
-        "visita" => "bg-green-600",
+        "visita" => "bg-emerald-600",
         "reporte" => "bg-indigo-600",
-        _ => "bg-gray-600"
+        _ => "bg-slate-600"
     };
 
     private string GetBadgeClass(string estado) => estado switch
     {
-        "Completado" => "bg-green-100 text-green-800",
+        "Completado" => "bg-emerald-50 text-emerald-700",
         "En Proceso" => "bg-blue-100 text-blue-800",
-        "Pendiente" => "bg-amber-100 text-amber-800",
-        _ => "bg-gray-100 text-gray-800"
+        "Pendiente" => "bg-amber-50 text-amber-700",
+        _ => "bg-slate-100 text-slate-700"
     };
 
     private class ActividadRecienteModel

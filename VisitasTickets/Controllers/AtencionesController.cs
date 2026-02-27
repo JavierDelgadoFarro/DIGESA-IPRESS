@@ -77,7 +77,8 @@ namespace VisitasTickets.API.Controllers
                 .Include(a => a.IdUsuarioRegistroNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
                 .Where(a => a.IdEstadoAtencionNavigation.Orden < 4) // Pendiente, En Ventanilla y En Pausa
-                .OrderBy(a => a.FechaRegistro)
+                .OrderByDescending(a => a.EsPreferencial) // Preferenciales primero
+                .ThenBy(a => a.FechaRegistro) // Luego por orden de registro
                 .Select(a => new AtencionDto
                 {
                     IdAtencion = a.IdAtencion,
@@ -103,10 +104,17 @@ namespace VisitasTickets.API.Controllers
                 })
                 .ToListAsync();
 
+            // Calcular el número de orden dinámicamente
+            int numeroOrden = 1;
+            foreach (var atencion in atenciones)
+            {
+                atencion.NumeroOrden = numeroOrden++;
+            }
+
             return Ok(atenciones);
         }
 
-        // GET: api/atenciones/historial - Obtener atenciones atendidas
+        // GET: api/atenciones/historial - Obtener atenciones atendidas y canceladas
         [HttpGet("historial")]
         public async Task<ActionResult<IEnumerable<AtencionDto>>> GetAtencionesHistorial()
         {
@@ -118,7 +126,7 @@ namespace VisitasTickets.API.Controllers
                     .ThenInclude(u => u!.IdPersonalNavigation)
                 .Include(a => a.IdUsuarioActualizaNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
-                .Where(a => a.IdEstadoAtencionNavigation.NombreEstado == "Atendido")
+                .Where(a => a.IdEstadoAtencionNavigation.NombreEstado == "Atendido" || a.IdEstadoAtencionNavigation.NombreEstado == "Cancelado")
                 .OrderByDescending(a => a.FechaActualizacion)
                 .Select(a => new AtencionDto
                 {
@@ -361,6 +369,30 @@ namespace VisitasTickets.API.Controllers
                 // Notificar a todos los clientes sobre el cambio de estado
                 await _notificationService.NotificarCambioEstadoAtencion(id);
                 await _notificationService.NotificarActualizacionDashboard();
+
+                // Si el estado cambia a "En Ventanilla" (orden = 2), notificar al visitante
+                var nuevoEstado = await _context.UtdEstadoAtencions.FindAsync(dto.IdEstadoAtencion);
+                
+                if (nuevoEstado != null && nuevoEstado.Orden == 2) // "En Ventanilla"
+                {
+                    // Calcular el número de atención del día
+                    var inicioHoy = DateTime.Today;
+                    var finHoy = inicioHoy.AddDays(1);
+                    var numeroAtencion = await _context.UtdAtencions
+                        .Where(a => a.FechaRegistro >= inicioHoy &&
+                                   a.FechaRegistro < finHoy &&
+                                   a.FechaRegistro <= atencion.FechaRegistro)
+                        .CountAsync();
+                    
+                    await _notificationService.NotificarTurnoVisitante(
+                        atencion.NumeroDocumento,
+                        "¡Es su turno! Por favor diríjase a la ventanilla de atención",
+                        numeroAtencion
+                    );
+                }
+
+                // Notificar también actualización general de turnos para todos los visitantes
+                await _notificationService.NotificarActualizacionTurnos();
 
                 return NoContent();
             }

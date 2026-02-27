@@ -21,6 +21,7 @@ namespace VisitasTickets.Domain.Dtos
         public int IdEstadoAtencion { get; set; }
         public string NombreEstado { get; set; } = string.Empty;
         public int OrdenEstado { get; set; }
+        public int NumeroOrden { get; set; } // Número de orden dinámico en la cola
         public DateTime FechaRegistro { get; set; }
         public DateTime? FechaActualizacion { get; set; }
         public int? IdUsuarioRegistro { get; set; }

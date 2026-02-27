@@ -74,12 +74,12 @@
                         <!-- Mensaje de Error -->
                         @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg animate-pulse">
+                            <div class="bg-rose-50 border-l-4 border-rose-600 p-4 rounded-r-lg animate-pulse">
                                 <div class="flex items-center gap-2">
-                                    <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <svg class="w-5 h-5 text-rose-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
                                     </svg>
-                                    <p class="text-sm text-red-700 font-medium">@errorMessage</p>
+                                    <p class="text-sm text-rose-700 font-medium">@errorMessage</p>
                                 </div>
                             </div>
                         }
@@ -153,7 +153,7 @@
     private int usuarioId;
     private bool mostrarToast = false;
     private string mensajeToast = "";
-    private string toastColor = "bg-green-600";
+    private string toastColor = "bg-emerald-600";
 
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
@@ -249,7 +249,7 @@
         if (string.IsNullOrWhiteSpace(nuevaPassword) || nuevaPassword != confirmarPassword)
         {
             mensajeToast = "Las contraseñas no coinciden.";
-            toastColor = "bg-red-600";
+            toastColor = "bg-rose-600";
             mostrarToast = true;
             StateHasChanged();
             await Task.Delay(3000);
@@ -262,7 +262,7 @@
         {
             mostrarModalCambioPassword = false;
             mensajeToast = "Contraseña actualizada correctamente. Vuelva a iniciar sesión.";
-            toastColor = "bg-green-600";
+            toastColor = "bg-emerald-600";
             mostrarToast = true;
             StateHasChanged();
 
@@ -274,7 +274,7 @@
         else
         {
             mensajeToast = "Error al cambiar la contraseña.";
-            toastColor = "bg-red-600";
+            toastColor = "bg-rose-600";
             mostrarToast = true;
             StateHasChanged();
             await Task.Delay(3000);

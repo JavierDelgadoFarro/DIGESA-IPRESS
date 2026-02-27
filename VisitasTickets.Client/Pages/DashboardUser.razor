@@ -87,11 +87,11 @@
         </div>
 
         <!-- Card 3: Atenciones Pausadas -->
-        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-lg p-6 border-l-4 border-green-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer">
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl shadow-lg p-6 border-l-4 border-emerald-600 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer">
             <div class="flex items-center justify-between">
                 <div class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
-                        <p class="text-sm font-semibold text-green-800 uppercase tracking-wide">Atenciones Pausadas</p>
+                        <p class="text-sm font-semibold text-emerald-700 uppercase tracking-wide">Atenciones Pausadas</p>
                     </div>
                     <p class="text-4xl font-bold text-gray-900 mb-3">@atencionesPausadas</p>
                     <div class="flex items-center gap-2">
@@ -103,7 +103,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="w-20 h-20 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
+                <div class="w-20 h-20 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:rotate-6 transition-transform">
                     <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -199,7 +199,7 @@
                                                 <span class="text-xs text-gray-500">@atencion.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
                                             </div>
                                         </div>
-                                        <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+                                        <span class="bg-emerald-50 text-emerald-700 text-xs px-3 py-1 rounded-full font-semibold whitespace-nowrap">
                                             Atendido
                                         </span>
                                     </div>
@@ -356,8 +356,8 @@
     {
         accesosRapidos = new List<AccesoRapidoModel>
         {
-            new() { Nombre = "Atenciones Pendientes", Descripcion = "Ver cola de espera", Ruta = "/atenciones/pendientes", ColorFondo = "bg-amber-100", ColorIcono = "text-amber-600", ColorHover = "hover:bg-amber-50", ColorTexto = "text-amber-600", IconoPath = "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
-            new() { Nombre = "Mis Atenciones", Descripcion = "Historial completado", Ruta = "/atenciones/atendidos", ColorFondo = "bg-green-100", ColorIcono = "text-green-600", ColorHover = "hover:bg-green-50", ColorTexto = "text-green-600", IconoPath = "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
+            new() { Nombre = "Atenciones Pendientes", Descripcion = "Ver cola de espera", Ruta = "/atenciones/pendientes", ColorFondo = "bg-amber-50", ColorIcono = "text-amber-600", ColorHover = "hover:bg-amber-50", ColorTexto = "text-amber-600", IconoPath = "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+            new() { Nombre = "Mis Atenciones", Descripcion = "Historial completado", Ruta = "/atenciones/atendidos", ColorFondo = "bg-emerald-50", ColorIcono = "text-emerald-600", ColorHover = "hover:bg-emerald-50", ColorTexto = "text-emerald-600", IconoPath = "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
         };
     }
 
@@ -390,7 +390,7 @@
     {
         "preferencial" => "bg-purple-600",
         "ticket" => "bg-blue-600",
-        _ => "bg-gray-600"
+        _ => "bg-slate-600"
     };
 
     private class MiAtencionModel

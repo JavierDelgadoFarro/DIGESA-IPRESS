@@ -1,0 +1,503 @@
+@page "/mi-turno/id/{IdAtencion:int}"
+@layout PublicLayout
+@using VisitasTickets.Domain.Dtos
+@using VisitasTickets.Client.Services
+@using Microsoft.JSInterop
+@inject VisitanteService VisitanteService
+@inject VisitanteSignalRService SignalRService
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Mi Turno - DIGESA</PageTitle>
+
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8 px-4">
+    <div class="max-w-4xl mx-auto">
+        
+        @if (turno == null && !cargando)
+        {
+            <!-- No se encontró turno -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                <div class="text-6xl mb-4">❌</div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">No se encontró su turno</h2>
+                <p class="text-gray-600 mb-6">No se encontró la atención solicitada</p>
+                <button @onclick="@(() => NavManager.NavigateTo("/registro-publico"))" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+                    Registrar Nueva Atención
+                </button>
+            </div>
+        }
+        else if (cargando)
+        {
+            <!-- Cargando -->
+            <div class="bg-white rounded-2xl shadow-xl p-12 text-center">
+                <div class="text-6xl mb-4">⏳</div>
+                <p class="text-xl text-gray-600">Consultando su turno...</p>
+            </div>
+        }
+        else if (turno != null)
+        {
+            <!-- Tarjeta principal del turno -->
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6">
+                
+                <!-- Header con estado -->
+                <div class="@GetColorClasePorEstado() p-8 text-white text-center relative">
+                    <!-- Número de orden destacado -->
+                    <div class="absolute top-4 right-4 bg-white bg-opacity-90 rounded-full w-16 h-16 flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="text-xs text-gray-600 font-semibold">N°</div>
+                            <div class="text-2xl font-bold @(turno.NumeroOrden <= 3 ? "text-emerald-600" : "text-blue-600")">@turno.NumeroOrden</div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-7xl mb-4">@GetEmojiPorEstado()</div>
+                    <h1 class="text-4xl font-bold mb-2">@GetTituloPorEstado()</h1>
+                    <p class="text-xl opacity-90">@turno.NombreTramite</p>
+                </div>
+
+                <!-- Contenido -->
+                <div class="p-8">
+                    <!-- Información del estado -->
+                    <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                        @if (turno.EstadoActual == "Pendiente")
+                        {
+                            <div class="text-center">
+                                <p class="text-2xl font-semibold text-gray-800 mb-3">
+                                    @if (turno.AtencionesPendientesAntes == 0)
+                                    {
+                                        <span>En breve lo estaremos atendiendo 🕐</span>
+                                    }
+                                    else if (turno.AtencionesPendientesAntes == 1)
+                                    {
+                                        <span>Falta <span class="text-blue-600">1 persona</span> antes que usted</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Faltan <span class="text-blue-600">@turno.AtencionesPendientesAntes personas</span> antes que usted</span>
+                                    }
+                                </p>
+                                <p class="text-gray-600">Por favor manténgase cerca y atento a su turno</p>
+                            </div>
+                        }
+                        else if (turno.EstadoActual == "En Ventanilla")
+                        {
+                            <div class="text-center animate-pulse">
+                                <p class="text-3xl font-bold text-emerald-600 mb-3">📢 ¡ES SU TURNO AHORA!</p>
+                                <p class="text-xl text-gray-700">Por favor diríjase a la ventanilla de atención</p>
+                            </div>
+                        }
+                        else if (turno.EstadoActual == "En Pausa")
+                        {
+                            <div class="text-center">
+                                <p class="text-2xl font-semibold text-amber-600 mb-3">Su atención está en pausa</p>
+                                <p class="text-gray-600">Por favor espere, será reanudada en breve</p>
+                            </div>
+                        }
+                        else if (turno.EstadoActual == "Atendido")
+                        {
+                            <div class="text-center">
+                                <div class="text-8xl mb-6">👋</div>
+                                <h2 class="text-3xl font-bold text-blue-900 mb-4">Gracias por su visita</h2>
+                                <p class="text-xl text-gray-700 mb-2">DIGESA</p>
+                                <p class="text-lg text-gray-600">Unidad de Trámite Documentario</p>
+                                <p class="text-sm text-gray-500 mt-6 animate-pulse">Esta ventana se cerrará automáticamente...</p>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Información adicional -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-1">👤 Nombre</p>
+                            <p class="font-semibold text-gray-900">@turno.NombreCompleto</p>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <p class="text-sm text-gray-600 mb-1">📄 Documento</p>
+                            <p class="font-semibold text-gray-900">@turno.TipoDocumento: @turno.NumeroDocumento</p>
+                        </div>
+                    </div>
+
+                    <!-- Última actualización y estado de conexión -->
+                    <div class="text-center text-sm space-y-2">
+                        <div class="text-gray-500">
+                            <p>🔄 Última actualización: @ultimaActualizacion.ToString("HH:mm:ss")</p>
+                        </div>
+                        
+                        @if (SignalRService.IsConnected)
+                        {
+                            <div class="flex items-center justify-center gap-2 text-emerald-600">
+                                <span class="relative flex h-3 w-3">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                </span>
+                                <span>Notificaciones en tiempo real activas</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="flex items-center justify-center gap-2 text-amber-600">
+                                <span class="relative flex h-3 w-3">
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                                </span>
+                                <span>Actualizaciones cada 10 segundos</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int IdAtencion { get; set; }
+
+    private TurnoConsultaDto? turno;
+    private bool cargando = true;
+    private DateTime ultimaActualizacion = DateTime.Now;
+    private System.Threading.Timer? timer;
+    private bool audioInicializado = false;
+    private string mensajeDebug = "";
+    private bool yaAtendido = false; // Bandera para evitar múltiples cierres
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ConsultarTurno();
+
+        // Solicitar permiso para notificaciones del navegador
+        await SolicitarPermisoNotificaciones();
+
+        // Iniciar conexión SignalR
+        await IniciarSignalR();
+
+        // Configurar actualización automática cada 10 segundos (backup por si SignalR falla)
+        timer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await ConsultarTurno();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
+
+    private async Task IniciarSignalR()
+    {
+        try
+        {
+            // Suscribirse a eventos de actualización general
+            SignalRService.OnActualizacionTurnos += async () =>
+            {
+                Console.WriteLine("MiTurno: Actualización general de turnos");
+                await InvokeAsync(async () =>
+                {
+                    await ConsultarTurno();
+                    StateHasChanged();
+                });
+            };
+
+            // Iniciar conexión (ya no necesitamos pasar documento, solo nos suscribimos a actualizaciones generales)
+            await SignalRService.IniciarConexionAsync("");
+            Console.WriteLine($"MiTurno: SignalR conectado: {SignalRService.IsConnected}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al iniciar SignalR en MiTurno: {ex.Message}");
+        }
+    }
+
+    private async Task SolicitarPermisoNotificaciones()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission().then(permission => {
+                        console.log('Permiso de notificaciones:', permission);
+                    });
+                }
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al solicitar permiso de notificaciones: {ex.Message}");
+        }
+    }
+
+    private async Task MostrarNotificacionPush(string titulo, string mensaje)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $@"
+                if ('Notification' in window && Notification.permission === 'granted') {{
+                    new Notification('{titulo}', {{
+                        body: '{mensaje}',
+                        icon: '/favicon.ico',
+                        badge: '/favicon.ico',
+                        vibrate: [200, 100, 200],
+                        requireInteraction: true
+                    }});
+                }}
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al mostrar notificación push: {ex.Message}");
+        }
+    }
+
+    private async Task ReproducirNotificacionVoz(string mensaje)
+    {
+        try
+        {
+            var mensajeLimpio = mensaje.Replace("'", "\\'");
+            
+            mensajeDebug = $"🔊 Intentando reproducir voz...";
+            StateHasChanged();
+            await Task.Delay(100);
+            
+            // Verificar primero si la función existe
+            var funcionExiste = await JS.InvokeAsync<bool>("eval", "typeof window.reproducirVozTurno === 'function'");
+            
+            if (!funcionExiste)
+            {
+                mensajeDebug = "❌ FUNCIÓN NO EXISTE - Presione el botón verde primero";
+                StateHasChanged();
+                Console.WriteLine("[VOZ] Función global no inicializada");
+                return;
+            }
+            
+            mensajeDebug = $"🎤 Llamando a reproducirVozTurno...";
+            StateHasChanged();
+            await Task.Delay(100);
+            
+            // Usar la función global que fue inicializada con interacción del usuario
+            await JS.InvokeVoidAsync("eval", $"window.reproducirVozTurno('{mensajeLimpio}');");
+            
+            mensajeDebug = $"✅ VOZ REPRODUCIDA: \"{mensaje}\" - Hora: {DateTime.Now:HH:mm:ss}";
+            StateHasChanged();
+            
+            Console.WriteLine($"[VOZ] Reproducida correctamente: {mensaje}");
+        }
+        catch (Exception ex)
+        {
+            mensajeDebug = $"❌ ERROR: {ex.Message}";
+            StateHasChanged();
+            Console.WriteLine($"Error al reproducir notificación de voz: {ex.Message}");
+        }
+    }
+
+    private async Task ProbarAudio()
+    {
+        try
+        {
+            mensajeDebug = "Inicializando audio...";
+            StateHasChanged();
+            
+            // Inicializar el contexto de audio con interacción del usuario
+            await JS.InvokeVoidAsync("eval", @"
+                // Inicializar AudioContext y speechSynthesis
+                try {
+                    // 1. Crear AudioContext (necesario para móviles)
+                    if (!window.audioContextIniciado) {
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        audioContext.resume();
+                        window.audioContextIniciado = true;
+                        console.log('[AUDIO] AudioContext inicializado');
+                    }
+                    
+                    // 2. Crear un elemento de audio silencioso (desbloquea el audio en móviles)
+                    if (!window.audioElementCreado) {
+                        const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+                        silentAudio.play().then(() => {
+                            console.log('[AUDIO] Audio silencioso reproducido - contexto desbloqueado');
+                        }).catch(e => console.log('[AUDIO] Error con audio silencioso:', e));
+                        window.audioElementCreado = true;
+                    }
+                    
+                    // 3. Preparar función global para reproducir voz
+                    window.reproducirVozTurno = function(mensaje) {
+                        console.log('[VOZ GLOBAL] Llamada para reproducir:', mensaje);
+                        
+                        if (!('speechSynthesis' in window)) {
+                            console.error('[VOZ GLOBAL] speechSynthesis no disponible');
+                            return;
+                        }
+                        
+                        // Cancelar cualquier voz anterior
+                        window.speechSynthesis.cancel();
+                        
+                        // Crear y reproducir
+                        const utterance = new SpeechSynthesisUtterance(mensaje);
+                        utterance.lang = 'es-ES';
+                        utterance.rate = 0.9;
+                        utterance.pitch = 1.0;
+                        utterance.volume = 1.0;
+                        
+                        utterance.onstart = () => console.log('[VOZ GLOBAL] Iniciada');
+                        utterance.onend = () => console.log('[VOZ GLOBAL] Finalizada');
+                        utterance.onerror = (e) => console.error('[VOZ GLOBAL] Error:', e);
+                        
+                        window.speechSynthesis.speak(utterance);
+                        
+                        // Forzar inicio si es necesario
+                        setTimeout(() => {
+                            if (window.speechSynthesis.paused) {
+                                window.speechSynthesis.resume();
+                            }
+                        }, 100);
+                    };
+                    
+                    console.log('[AUDIO] Sistema de voz completamente inicializado');
+                    window.audioSistemaListo = true;
+                    
+                } catch (e) {
+                    console.error('[AUDIO] Error al inicializar:', e);
+                    window.audioSistemaListo = false;
+                }
+            ");
+
+            // Esperar un momento
+            await Task.Delay(200);
+
+            mensajeDebug = "Probando voz...";
+            StateHasChanged();
+
+            // Probar la voz usando la función global
+            await JS.InvokeVoidAsync("eval", "window.reproducirVozTurno('Audio de prueba activado. Las notificaciones de voz funcionarán correctamente.');");
+            
+            // Esperar para que termine de hablar
+            await Task.Delay(1000);
+            
+            // Verificar si está listo
+            var listo = await JS.InvokeAsync<bool>("eval", "window.audioSistemaListo === true");
+            
+            if (listo)
+            {
+                audioInicializado = true;
+                mensajeDebug = "✅ Sistema de audio completamente inicializado";
+            }
+            else
+            {
+                mensajeDebug = "⚠️ Audio inicializado pero verificación falló";
+            }
+            
+            // Mostrar confirmación visual
+            await MostrarNotificacionPush("Audio Activado", "Las notificaciones de voz están ahora habilitadas");
+            
+            StateHasChanged();
+            Console.WriteLine("Audio de prueba reproducido correctamente");
+        }
+        catch (Exception ex)
+        {
+            mensajeDebug = $"❌ Error: {ex.Message}";
+            audioInicializado = false;
+            StateHasChanged();
+            Console.WriteLine($"Error al probar audio: {ex.Message}");
+        }
+    }
+
+    private async Task ConsultarTurno()
+    {
+        cargando = true;
+        turno = await VisitanteService.ConsultarTurnoPorIdAsync(IdAtencion);
+        ultimaActualizacion = DateTime.Now;
+        cargando = false;
+        
+        // Si el estado cambió a "Atendido" y aún no hemos cerrado
+        if (turno?.EstadoActual == "Atendido" && !yaAtendido)
+        {
+            yaAtendido = true;
+            // Esperar 3 segundos y cerrar
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                await InvokeAsync(async () =>
+                {
+                    await CerrarVentana();
+                });
+            });
+        }
+    }
+
+    private string GetColorClasePorEstado()
+    {
+        return turno?.EstadoActual switch
+        {
+            "Pendiente" => "bg-blue-600",
+            "En Ventanilla" => "bg-emerald-600 animate-pulse",
+            "En Pausa" => "bg-amber-600",
+            "Atendido" => "bg-slate-600",
+            _ => "bg-slate-600"
+        };
+    }
+
+    private string GetEmojiPorEstado()
+    {
+        return turno?.EstadoActual switch
+        {
+            "Pendiente" => "⏳",
+            "En Ventanilla" => "📢",
+            "En Pausa" => "⏸️",
+            "Atendido" => "✅",
+            _ => "❓"
+        };
+    }
+
+    private string GetTituloPorEstado()
+    {
+        return turno?.EstadoActual switch
+        {
+            "Pendiente" => "En Espera",
+            "En Ventanilla" => "¡ES SU TURNO!",
+            "En Pausa" => "En Pausa",
+            "Atendido" => "Atención Completada",
+            _ => turno?.EstadoActual ?? "Estado Desconocido"
+        };
+    }
+
+    private async Task CerrarVentana()
+    {
+        // Detener el timer para evitar actualizaciones
+        timer?.Dispose();
+        
+        // Intentar cerrar la pestaña/ventana con múltiples métodos
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                // Método 1: Cerrar directamente
+                window.close();
+                
+                // Método 2: Si fue abierta con window.open
+                if (window.opener) {
+                    window.opener = null;
+                    window.open('', '_self');
+                    window.close();
+                }
+                
+                // Método 3: Para navegadores móviles
+                window.open('about:blank', '_self');
+                window.close();
+                
+                // Método 4: Si nada funciona, ir a página en blanco
+                setTimeout(function() {
+                    window.location.href = 'about:blank';
+                }, 500);
+            ");
+        }
+        catch
+        {
+            // Fallback: redirigir a about:blank
+            NavManager.NavigateTo("about:blank", true);
+        }
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+        
+        // El servicio SignalR se limpiará automáticamente al ser Scoped
+        _ = SignalRService.DetenerConexionAsync();
+    }
+}
+

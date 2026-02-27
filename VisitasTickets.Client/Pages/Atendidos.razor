@@ -14,15 +14,15 @@
     <!-- Título de la Página -->
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Historial de Atenciones</h1>
-            <p class="text-sm text-gray-500 mt-1">Consulta todas las atenciones finalizadas</p>
+            <h1 class="text-3xl font-bold text-slate-900">Historial de Atenciones</h1>
+            <p class="text-sm text-slate-500 mt-1">Consulta todas las atenciones finalizadas y canceladas</p>
         </div>
     </div>
 
     <!-- Card con Filtros y Lista -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <!-- Filtros -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/30">
             <!-- Buscador -->
             <div class="flex-1 max-w-md">
                 <div class="relative">
@@ -31,8 +31,8 @@
                            @bind:event="oninput"
                            @bind:after="OnSearchChanged"
                            placeholder="Buscar por nombre, apellido o documento..."
-                           class="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
-                    <svg class="absolute right-3 top-2.5 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           class="w-full pl-4 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm bg-white text-slate-900 placeholder:text-slate-400">
+                    <svg class="absolute right-3 top-2.5 w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                 </div>
@@ -40,22 +40,30 @@
 
             <!-- Filtros -->
             <div class="flex items-center gap-3 flex-shrink-0">
-                <!-- Filtro por Trámite -->
-                <select @bind="tramiteFiltro" @bind:after="OnFiltroChanged"
-                        class="min-w-[180px] px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all">
-                    <option value="">Todos los trámites</option>
-                    @foreach (var tramite in tiposTramite)
-                    {
-                        <option value="@tramite.IdTipoTramite">@tramite.NombreTramite</option>
-                    }
+                <!-- Filtro por Estado -->
+                <select @bind="estadoFiltro" @bind:after="OnFiltroChanged"
+                        class="min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
+                    <option value="">Todos los estados</option>
+                    <option value="Atendido">✅ Atendido</option>
+                    <option value="Cancelado">❌ Cancelado</option>
                 </select>
 
                 <!-- Filtro Preferencial -->
                 <select @bind="preferencialFiltro" @bind:after="OnFiltroChanged"
-                        class="min-w-[140px] px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all">
+                        class="min-w-[140px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
                     <option value="">Todos</option>
                     <option value="preferencial">⭐ Preferenciales</option>
                     <option value="normal">Normales</option>
+                </select>
+
+                <!-- Filtro por Usuario Atendedor -->
+                <select @bind="usuarioFiltro" @bind:after="OnFiltroChanged"
+                        class="min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
+                    <option value="">Todos los usuarios</option>
+                    @foreach (var usuario in UsuariosQueAtendieron)
+                    {
+                        <option value="@usuario.Id">@usuario.Nombre</option>
+                    }
                 </select>
             </div>
         </div>
@@ -75,8 +83,9 @@
                     {
                         var isExpanded = atencionExpandida == atencion.IdAtencion;
                         var tiempoTotal = CalcularTiempoTotal(atencion);
+                        var borderColor = atencion.NombreEstado == "Cancelado" ? "border-rose-300" : "border-emerald-300";
 
-                        <div class="border-2 border-green-300 rounded-lg overflow-hidden bg-white hover:shadow-md transition-all">
+                        <div class="border-2 @borderColor rounded-lg overflow-hidden bg-white hover:shadow-md transition-all">
                             <!-- Header Clickeable -->
                             <div class="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
                                  @onclick="@(() => ToggleExpand(atencion.IdAtencion))">
@@ -106,7 +115,7 @@
                                                 <span class="text-xs text-gray-500">@atencion.TipoDocumento: @atencion.NumeroDocumento</span>
                                                 @if (atencion.EsPreferencial)
                                                 {
-                                                    <span class="text-xs font-semibold px-2 py-0.5 bg-amber-200 text-amber-800 rounded-full">
+                                                    <span class="text-xs font-semibold px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-full">
                                                         ⭐ Preferencial
                                                     </span>
                                                 }
@@ -118,10 +127,20 @@
                                                     </svg>
                                                     @atencion.NombreTramite
                                                 </span>
+                                            </div>
+                                            <div class="flex items-center gap-4 text-xs text-gray-600 mt-1.5">
                                                 <span class="flex items-center gap-1">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                                                     </svg>
+                                                    <span class="font-medium">Registro:</span>
+                                                    @atencion.FechaRegistro.ToString("dd/MM/yyyy HH:mm")
+                                                </span>
+                                                <span class="flex items-center gap-1">
+                                                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <span class="font-medium">Finalización:</span>
                                                     @atencion.FechaActualizacion?.ToString("dd/MM/yyyy HH:mm")
                                                 </span>
                                             </div>
@@ -129,9 +148,18 @@
 
                                         <!-- Badge de Estado y Tiempo -->
                                         <div class="flex items-center gap-3">
-                                            <span class="text-xs font-semibold px-3 py-1.5 bg-green-100 text-green-800 rounded-full">
-                                                🟢 Atendido
-                                            </span>
+                                            @if (atencion.NombreEstado == "Atendido")
+                                            {
+                                                <span class="text-xs font-semibold px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full">
+                                                    ✅ Atendido
+                                                </span>
+                                            }
+                                            else if (atencion.NombreEstado == "Cancelado")
+                                            {
+                                                <span class="text-xs font-semibold px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 rounded-full">
+                                                    ❌ Cancelado
+                                                </span>
+                                            }
                                             @if (tiempoTotal.TotalMinutes > 0)
                                             {
                                                 <span class="text-xs text-gray-500 font-medium">
@@ -216,21 +244,21 @@
                                                                 }
                                                                 else if (esUltimo && item.OrdenEstadoNuevo >= 4)
                                                                 {
-                                                                    <p class="text-xs text-green-600 font-medium mt-1">
+                                                                    <p class="text-xs text-emerald-600 font-medium mt-1">
                                                                         ✅ Atención finalizada
                                                                     </p>
                                                                 }
 
                                                                 @if (!string.IsNullOrEmpty(item.Observacion) && item.IdEstadoAnterior != null)
                                                                 {
-                                                                    <div class="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                                                                    <div class="mt-2 p-2 bg-blue-50 rounded border border-blue-100">
                                                                         <p class="text-xs text-blue-900">@item.Observacion</p>
                                                                     </div>
                                                                 }
 
                                                                 @if (esUltimo && tiempoTotalCalculado.TotalMinutes > 0)
                                                                 {
-                                                                    <p class="text-xs text-green-600 font-bold mt-2">
+                                                                    <p class="text-xs text-emerald-600 font-bold mt-2">
                                                                         🏁 Tiempo total de atención: @FormatearTiempo(tiempoTotalCalculado)
                                                                     </p>
                                                                 }
@@ -266,7 +294,7 @@
                                             <!-- Atención Preferencial -->
                                             @if (atencion.EsPreferencial && !string.IsNullOrEmpty(atencion.NombreTipoPreferencial))
                                             {
-                                                <div class="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                                                <div class="bg-amber-50 rounded-lg p-3 border border-amber-100">
                                                     <p class="text-xs text-amber-700 mb-1">Atención Preferencial</p>
                                                     <p class="text-sm font-semibold text-amber-900">@atencion.NombreTipoPreferencial</p>
                                                 </div>
@@ -283,7 +311,7 @@
 
                                             @if (!string.IsNullOrEmpty(atencion.ObservacionAtencion))
                                             {
-                                                <div class="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                                <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
                                                     <p class="text-xs text-blue-700 mb-1">Observación de Ventanilla</p>
                                                     <p class="text-sm text-blue-900 font-medium">@atencion.ObservacionAtencion</p>
                                                 </div>
@@ -362,7 +390,7 @@
                     <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <h3 class="mt-4 text-lg font-medium text-gray-900">No hay atenciones finalizadas</h3>
+                    <h3 class="mt-4 text-lg font-medium text-gray-900">No hay atenciones en el historial</h3>
                     <p class="mt-2 text-sm text-gray-500">No se encontraron atenciones con los filtros seleccionados</p>
                 </div>
             }
@@ -395,8 +423,9 @@
     private List<TipoTramiteDto> tiposTramite = new();
     private Dictionary<int, List<HistorialAtencionDto>> historialesPorAtencion = new();
     private string searchText = "";
-    private string tramiteFiltro = "";
+    private string estadoFiltro = "";
     private string preferencialFiltro = "";
+    private string usuarioFiltro = "";
     private bool isLoading = false;
     private int? atencionExpandida = null;
     private bool cargandoHistorial = false;
@@ -455,10 +484,10 @@
                 );
             }
 
-            // Filtro por trámite
-            if (!string.IsNullOrEmpty(tramiteFiltro) && int.TryParse(tramiteFiltro, out int idTramite))
+            // Filtro por estado
+            if (!string.IsNullOrEmpty(estadoFiltro))
             {
-                resultado = resultado.Where(a => a.IdTipoTramite == idTramite);
+                resultado = resultado.Where(a => a.NombreEstado == estadoFiltro);
             }
 
             // Filtro preferencial
@@ -471,8 +500,27 @@
                 resultado = resultado.Where(a => !a.EsPreferencial);
             }
 
+            // Filtro por usuario atendedor
+            if (!string.IsNullOrEmpty(usuarioFiltro) && int.TryParse(usuarioFiltro, out int idUsuario))
+            {
+                resultado = resultado.Where(a => a.IdUsuarioActualiza == idUsuario);
+            }
+
             // Ordenar por fecha de atención descendente
             return resultado.OrderByDescending(a => a.FechaActualizacion ?? a.FechaRegistro);
+        }
+    }
+
+    private List<(int Id, string Nombre)> UsuariosQueAtendieron
+    {
+        get
+        {
+            return atenciones
+                .Where(a => a.IdUsuarioActualiza.HasValue && !string.IsNullOrEmpty(a.NombreUsuarioActualiza))
+                .GroupBy(a => new { a.IdUsuarioActualiza, a.NombreUsuarioActualiza })
+                .Select(g => (Id: g.Key.IdUsuarioActualiza!.Value, Nombre: g.Key.NombreUsuarioActualiza!))
+                .OrderBy(u => u.Nombre)
+                .ToList();
         }
     }
 
@@ -576,11 +624,12 @@
     {
         return orden switch
         {
-            1 => "bg-yellow-100",
-            2 => "bg-blue-100",
-            3 => "bg-orange-100",
-            4 => "bg-green-100",
-            _ => "bg-gray-100"
+            1 => "bg-amber-50",
+            2 => "bg-blue-50",
+            3 => "bg-slate-100",
+            4 => "bg-emerald-50",
+            5 => "bg-rose-50",
+            _ => "bg-slate-50"
         };
     }
 

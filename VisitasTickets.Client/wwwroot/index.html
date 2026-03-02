@@ -59,6 +59,17 @@
 
     <script src="_framework/blazor.webassembly.js"></script>
 
+    <script>
+        // Función para descargar archivos desde base64
+        window.downloadFileFromBase64 = function (fileName, base64Content) {
+            const linkSource = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Content}`;
+            const downloadLink = document.createElement("a");
+            downloadLink.href = linkSource;
+            downloadLink.download = fileName;
+            downloadLink.click();
+        };
+    </script>
+
     <style>
         #blazor-error-ui .dismiss {
             cursor: pointer;

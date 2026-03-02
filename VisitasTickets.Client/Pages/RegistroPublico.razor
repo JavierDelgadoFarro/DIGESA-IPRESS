@@ -1,7 +1,9 @@
 @page "/registro-publico"
 @layout PublicLayout
+@attribute [AllowAnonymous]
 @using VisitasTickets.Domain.Dtos
 @using VisitasTickets.Client.Services
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @inject HttpClient Http
 @inject VisitanteService VisitanteService

@@ -6,6 +6,7 @@
 @using VisitasTickets.Client.Components.Atenciones
 @using VisitasTickets.Domain.Dtos
 @using Microsoft.JSInterop
+@using static VisitasTickets.Client.Components.Common.ConfirmDialog
 @inject AtencionService AtencionService
 @inject NotificationService NotificationService
 @inject SignalRService SignalRService
@@ -279,12 +280,29 @@
                       DescripcionTramite="@(atencionSeleccionada?.NombreTramite)"
                       ObservacionInicial="@(atencionSeleccionada?.Observacion)"
                       @bind-Observacion="@observacionModal"
+                      TiposTrabajo="@tiposTrabajo"
+                      DetallesActividad="@detallesActividad"
+                      @bind-IdTipoTrabajo="@idTipoTrabajoModal"
+                      IdDetalleActividad="@idDetalleActividadModal"
+                      IdDetalleActividadChanged="@OnDetalleActividadChanged"
+                      @bind-NumeroExpediente="@numeroExpedienteModal"
+                      MostrarNumeroExpediente="@mostrarNumeroExpediente"
                       ErrorMessage="@errorModalAtender"
                       OnConfirm="@ConfirmarCambioEstado"
                       OnClose="@CerrarModalAtender"
                       OnPausar="@PausarAtencion"
                       OnContinuar="@ContinuarAtencion"
-                      OnCancelar="@CancelarAtencion" />
+                      OnCancelar="@ConfirmarCancelarAtencion" />
+
+<!-- Modal de Confirmación para Cancelar -->
+<ConfirmDialog IsVisible="@mostrarModalCancelar"
+               Title="¿Cancelar atención?"
+               Message="¿Está seguro de cancelar esta atención?"
+               Type="@ConfirmDialogType.Danger"
+               Icon="@ConfirmDialogIcon.Danger"
+               ConfirmButtonText="Cancelar atención"
+               OnConfirm="@CancelarAtencion"
+               OnCancel="@(() => mostrarModalCancelar = false)" />
 
 <!-- Toast -->
 <Toast />
@@ -294,10 +312,13 @@
     private List<TipoTramiteDto> tiposTramite = new();
     private List<TipoPreferencialDto> tiposPreferencial = new();
     private List<EstadoAtencionDto> estados = new();
+    private List<TipoTrabajoDto> tiposTrabajo = new();
+    private List<DetalleActividadDto> detallesActividad = new();
     private bool isLoading = true;
 
     // Modal
     private bool mostrarModal = false;
+    private bool mostrarModalCancelar = false;
     private string tipoDocumento = "DNI";
     private string numeroDocumento = "";
     private string nombres = "";
@@ -319,6 +340,10 @@
     private string tituloObservacionModal = "";
     private string placeholderObservacion = "";
     private string textoBotonConfirmar = "";
+    private int idTipoTrabajoModal = 0;
+    private int idDetalleActividadModal = 0;
+    private string numeroExpedienteModal = "";
+    private bool mostrarNumeroExpediente = false;
 
     // Filtros y Paginación
     private string searchText = "";
@@ -372,13 +397,17 @@
             var tiposTramiteTask = AtencionService.GetTiposTramiteAsync();
             var tiposPreferencialTask = AtencionService.GetTiposPreferencialAsync();
             var estadosTask = AtencionService.GetEstadosAsync();
+            var tiposTrabajoTask = AtencionService.GetTiposTrabajoAsync();
+            var detallesActividadTask = AtencionService.GetDetallesActividadAsync();
 
-            await Task.WhenAll(atencionesTask, tiposTramiteTask, tiposPreferencialTask, estadosTask);
+            await Task.WhenAll(atencionesTask, tiposTramiteTask, tiposPreferencialTask, estadosTask, tiposTrabajoTask, detallesActividadTask);
 
             atenciones = atencionesTask.Result;
             tiposTramite = tiposTramiteTask.Result;
             tiposPreferencial = tiposPreferencialTask.Result;
             estados = estadosTask.Result;
+            tiposTrabajo = tiposTrabajoTask.Result;
+            detallesActividad = detallesActividadTask.Result;
         }
         catch (Exception ex)
         {
@@ -509,6 +538,16 @@
                 tituloObservacionModal = "Observación de Atención";
                 placeholderObservacion = "Ingrese los detalles de la atención brindada...";
                 textoBotonConfirmar = "Finalizar";
+                
+                // Establecer valores por defecto para Tipo de Trabajo y Detalle de Actividad
+                var tipoPresencial = tiposTrabajo.FirstOrDefault(t => t.NombreTipoTrabajo == "PRESENCIAL");
+                idTipoTrabajoModal = tipoPresencial?.IdTipoTrabajo ?? (tiposTrabajo.FirstOrDefault()?.IdTipoTrabajo ?? 0);
+                idDetalleActividadModal = 0; // Sin selección por defecto
+                numeroExpedienteModal = "";
+                mostrarNumeroExpediente = false;
+                observacionModal = "";
+                errorModalAtender = "";
+                
                 mostrarCronometro = true; // Activar cronómetro
                 mostrarModalAtender = true;
                 
@@ -600,15 +639,16 @@
         }
     }
 
+    private void ConfirmarCancelarAtencion()
+    {
+        mostrarModalCancelar = true;
+    }
+
     private async Task CancelarAtencion()
     {
         if (atencionSeleccionada == null) return;
 
-        // Confirmar cancelación
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Está seguro de cancelar esta atención? La persona no está presente."))
-        {
-            return;
-        }
+        mostrarModalCancelar = false;
 
         var estadoCancelado = estados.FirstOrDefault(e => e.NombreEstado == "Cancelado");
         if (estadoCancelado == null)
@@ -658,6 +698,20 @@
         tituloObservacionModal = "Observación de Atención";
         placeholderObservacion = "Ingrese los detalles de la atención brindada...";
         textoBotonConfirmar = "Finalizar";
+        
+        // Establecer valores desde la atención o por defecto
+        if (atencion.IdTipoTrabajo.HasValue)
+        {
+            idTipoTrabajoModal = atencion.IdTipoTrabajo.Value;
+        }
+        else
+        {
+            var tipoPresencial = tiposTrabajo.FirstOrDefault(t => t.NombreTipoTrabajo == "PRESENCIAL");
+            idTipoTrabajoModal = tipoPresencial?.IdTipoTrabajo ?? (tiposTrabajo.FirstOrDefault()?.IdTipoTrabajo ?? 0);
+        }
+        
+        idDetalleActividadModal = atencion.IdDetalleActividad ?? 0;
+        
         mostrarCronometro = true;
         mostrarModalAtender = true;
         StateHasChanged();
@@ -685,6 +739,25 @@
             if (string.IsNullOrWhiteSpace(observacionModal))
             {
                 errorModalAtender = "La observación de atención es obligatoria.";
+                return;
+            }
+
+            if (idTipoTrabajoModal == 0)
+            {
+                errorModalAtender = "Debe seleccionar un tipo de trabajo.";
+                return;
+            }
+
+            if (idDetalleActividadModal == 0)
+            {
+                errorModalAtender = "Debe seleccionar un detalle de actividad.";
+                return;
+            }
+
+            // Validar número de expediente si está visible
+            if (mostrarNumeroExpediente && string.IsNullOrWhiteSpace(numeroExpedienteModal))
+            {
+                errorModalAtender = "Debe ingresar el número de expediente.";
                 return;
             }
 
@@ -719,7 +792,10 @@
                 IdAtencion = atencionSeleccionada.IdAtencion,
                 IdEstadoAtencion = estadoAtendido.IdEstadoAtencion,
                 Observacion = atencionSeleccionada.Observacion, // Mantener observación inicial
-                ObservacionAtencion = observacionModal // Nueva observación de atención
+                ObservacionAtencion = observacionModal, // Nueva observación de atención
+                IdTipoTrabajo = idTipoTrabajoModal,
+                IdDetalleActividad = idDetalleActividadModal,
+                NumeroExpediente = mostrarNumeroExpediente ? numeroExpedienteModal : null
             };
 
             var ok = await AtencionService.UpdateEstadoAtencionAsync(atencionSeleccionada.IdAtencion, dto);
@@ -861,6 +937,23 @@
         {
             Console.WriteLine($"Error al cargar atenciones: {ex.Message}");
         }
+    }
+
+    private void OnDetalleActividadChanged(int idDetalleActividad)
+    {
+        idDetalleActividadModal = idDetalleActividad;
+        
+        // Verificar si se debe mostrar el campo de Número de Expediente (IDs 1, 3, 8)
+        mostrarNumeroExpediente = (idDetalleActividad == 1 || idDetalleActividad == 3 || idDetalleActividad == 8);
+        
+        // Limpiar el campo si se oculta
+        if (!mostrarNumeroExpediente)
+        {
+            numeroExpedienteModal = "";
+        }
+        
+        // Limpiar error
+        errorModalAtender = "";
     }
 
     public void Dispose()

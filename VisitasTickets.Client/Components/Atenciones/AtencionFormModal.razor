@@ -1,4 +1,6 @@
 @using VisitasTickets.Domain.Dtos
+@using VisitasTickets.Client.Services
+@inject VisitanteService VisitanteService
 
 @if (IsVisible)
 {
@@ -33,57 +35,139 @@
                         </svg>
                         Datos del Ciudadano
                     </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Documento *</label>
+                    <div class="space-y-6">
+                        <!-- Atención Preferencial - PRIMERO -->
+                        <div class="p-4 border-2 border-amber-300 bg-amber-50 rounded-xl">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       checked="@EsPreferencial"
+                                       @onchange="@(e => EsPreferencialChanged.InvokeAsync((bool)e.Value!))"
+                                       class="w-6 h-6 text-amber-600 border-2 border-amber-400 rounded focus:ring-2 focus:ring-amber-500">
+                                <span class="ml-3 text-base font-bold text-amber-900">⭐ Atención Preferencial</span>
+                            </label>
+                            <p class="text-xs text-amber-700 mt-2 ml-9">Marque si tiene prioridad de atención (adulto mayor, gestante, discapacidad, etc.)</p>
+                        </div>
+
+                        <!-- Tipo Preferencial (si aplica) -->
+                        @if (EsPreferencial)
+                        {
+                            <div class="pl-8 border-l-4 border-amber-400 bg-amber-50 p-4 rounded-r-lg">
+                                <label class="block text-sm font-semibold text-amber-900 mb-2">Motivo Preferencial *</label>
+                                <select value="@(IdTipoPreferencial ?? 0)"
+                                        @onchange="@(e => IdTipoPreferencialChanged.InvokeAsync(int.Parse(e.Value?.ToString() ?? "0")))"
+                                        class="w-full px-4 py-3 border-2 border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                                    <option value="0">-- Seleccione el motivo --</option>
+                                    @foreach (var tipo in TiposPreferencial)
+                                    {
+                                        <option value="@tipo.IdTipoPreferencial">@tipo.NombreTipoPreferencial</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+
+                        <!-- Tipo de Documento -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-3">Tipo de Documento *</label>
                             <div class="flex gap-4">
-                                <label class="flex items-center cursor-pointer">
+                                <label class="flex items-center cursor-pointer px-6 py-3 border-2 rounded-lg transition-all @(TipoDocumento == "DNI" ? "border-blue-500 bg-blue-50" : "border-gray-300")">
                                     <input type="radio"
                                            value="DNI"
                                            checked="@(TipoDocumento == "DNI")"
-                                           @onchange="@(e => TipoDocumentoChanged.InvokeAsync("DNI"))"
+                                           @onchange="@(e => CambiarTipoDocumento("DNI"))"
                                            class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm font-medium text-gray-700">DNI</span>
+                                    <span class="ml-3 text-sm font-medium">📄 DNI</span>
                                 </label>
-                                <label class="flex items-center cursor-pointer">
+                                <label class="flex items-center cursor-pointer px-6 py-3 border-2 rounded-lg transition-all @(TipoDocumento == "CE" ? "border-blue-500 bg-blue-50" : "border-gray-300")">
                                     <input type="radio"
                                            value="CE"
                                            checked="@(TipoDocumento == "CE")"
-                                           @onchange="@(e => TipoDocumentoChanged.InvokeAsync("CE"))"
+                                           @onchange="@(e => CambiarTipoDocumento("CE"))"
                                            class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                                    <span class="ml-2 text-sm font-medium text-gray-700">Carnet de Extranjería</span>
+                                    <span class="ml-3 text-sm font-medium">🛂 Carnet de Extranjería</span>
                                 </label>
                             </div>
                         </div>
 
+                        <!-- Número de Documento CON BOTÓN BUSCAR -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <!-- Aviso informativo -->
+                            <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mb-3 rounded-r-lg">
+                                <p class="text-sm text-blue-800 font-medium">🔍 Primero busque su documento para verificar si ya está registrado en el sistema</p>
+                            </div>
+                            
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 Número de @(TipoDocumento == "DNI" ? "DNI" : "Carnet") *
                             </label>
-                            <input type="text"
-                                   value="@NumeroDocumento"
-                                   @oninput="@(e => NumeroDocumentoChanged.InvokeAsync(e.Value?.ToString() ?? ""))"
-                                   maxlength="@(TipoDocumento == "DNI" ? "8" : "20")"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                   placeholder="@(TipoDocumento == "DNI" ? "Ingrese 8 dígitos" : "Ingrese número")"/>
+                            <div class="flex gap-2">
+                                <input type="text"
+                                       value="@NumeroDocumento"
+                                       @oninput="@ValidarDocumento"
+                                       maxlength="@(TipoDocumento == "DNI" ? "8" : "12")"
+                                       class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-lg"
+                                       placeholder="@(TipoDocumento == "DNI" ? "8 dígitos" : "Hasta 12 caracteres")"/>
+                                <button type="button" 
+                                        @onclick="BuscarPorDocumento" 
+                                        disabled="@buscandoDatos"
+                                        class="px-4 py-3 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 font-semibold active:scale-95"
+                                        title="Buscar datos del documento">
+                                    @if (buscandoDatos)
+                                    {
+                                        <span class="text-lg">⏳</span>
+                                        <span class="hidden sm:inline">Buscando...</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-lg">🔍</span>
+                                        <span class="hidden sm:inline">Buscar</span>
+                                    }
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(errorDocumento))
+                            {
+                                <p class="text-rose-600 text-sm mt-1">⚠️ @errorDocumento</p>
+                            }
+                            else if (!string.IsNullOrEmpty(NumeroDocumento))
+                            {
+                                <p class="text-gray-500 text-xs mt-1">
+                                    @if (TipoDocumento == "DNI")
+                                    {
+                                        <span>@NumeroDocumento.Length de 8 dígitos</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@NumeroDocumento.Length de máximo 12 caracteres</span>
+                                    }
+                                </p>
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(mensajeBusqueda))
+                            {
+                                <p class="text-sm mt-2 font-medium @(mensajeBusqueda.Contains("✅") ? "text-emerald-600" : mensajeBusqueda.Contains("❌") ? "text-rose-600" : "text-blue-600")">
+                                    @mensajeBusqueda
+                                </p>
+                            }
                         </div>
 
+                        <!-- Nombres - DESHABILITADO hasta buscar -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nombres *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Nombres *</label>
                             <input type="text"
                                    value="@Nombres"
                                    @oninput="@(e => NombresChanged.InvokeAsync(e.Value?.ToString() ?? ""))"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                   placeholder="Ingrese nombres"/>
+                                   disabled="@(!camposHabilitados)"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                   placeholder="@(camposHabilitados ? "Ingrese nombres" : "")"/>
                         </div>
 
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Apellidos *</label>
+                        <!-- Apellidos - DESHABILITADO hasta buscar -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Apellidos *</label>
                             <input type="text"
                                    value="@Apellidos"
                                    @oninput="@(e => ApellidosChanged.InvokeAsync(e.Value?.ToString() ?? ""))"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                   placeholder="Ingrese apellidos"/>
+                                   disabled="@(!camposHabilitados)"
+                                   class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                   placeholder="@(camposHabilitados ? "Ingrese apellidos" : "")"/>
                         </div>
                     </div>
                 </div>
@@ -131,33 +215,6 @@
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
                                       placeholder="Agregue alguna observación adicional..."></textarea>
                             <p class="text-xs text-gray-500 mt-1">@(Observacion?.Length ?? 0)/500 caracteres</p>
-                        </div>
-
-                        <!-- Atención Preferencial -->
-                        <div class="bg-amber-50 border-2 border-amber-100 rounded-lg p-4">
-                            <label class="flex items-center cursor-pointer">
-                                <input type="checkbox"
-                                       checked="@EsPreferencial"
-                                       @onchange="@(e => EsPreferencialChanged.InvokeAsync((bool)e.Value!))"
-                                       class="w-5 h-5 text-amber-600 rounded focus:ring-2 focus:ring-amber-500">
-                                <span class="ml-3 text-sm font-semibold text-gray-900">⭐ Atención Preferencial</span>
-                            </label>
-
-                            @if (EsPreferencial)
-                            {
-                                <div class="mt-4">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Preferencia *</label>
-                                    <select value="@(IdTipoPreferencial ?? 0)"
-                                            @onchange="@(e => IdTipoPreferencialChanged.InvokeAsync(int.Parse(e.Value?.ToString() ?? "0")))"
-                                            class="w-full px-4 py-3 border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
-                                        <option value="0">-- Seleccione el motivo --</option>
-                                        @foreach (var tipo in TiposPreferencial)
-                                        {
-                                            <option value="@tipo.IdTipoPreferencial">@tipo.NombreTipoPreferencial</option>
-                                        }
-                                    </select>
-                                </div>
-                            }
                         </div>
                     </div>
                 </div>
@@ -231,6 +288,12 @@
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
+    // Variables para búsqueda y validación
+    private string errorDocumento = "";
+    private bool buscandoDatos = false;
+    private string mensajeBusqueda = "";
+    private bool camposHabilitados = false; // Controla si nombres y apellidos están habilitados
+
     private async Task Guardar()
     {
         await OnSave.InvokeAsync();
@@ -239,5 +302,100 @@
     private async Task Cerrar()
     {
         await OnClose.InvokeAsync();
+    }
+
+    private async Task CambiarTipoDocumento(string tipo)
+    {
+        await TipoDocumentoChanged.InvokeAsync(tipo);
+        await NumeroDocumentoChanged.InvokeAsync(""); // Limpiar el número cuando cambia el tipo
+        await NombresChanged.InvokeAsync(""); // Limpiar nombres
+        await ApellidosChanged.InvokeAsync(""); // Limpiar apellidos
+        errorDocumento = ""; // Limpiar el error
+        mensajeBusqueda = ""; // Limpiar mensaje de búsqueda
+        camposHabilitados = false; // Bloquear campos de nuevo
+    }
+
+    private async Task BuscarPorDocumento()
+    {
+        if (string.IsNullOrWhiteSpace(NumeroDocumento))
+        {
+            mensajeBusqueda = "Por favor ingrese un número de documento";
+            return;
+        }
+
+        // Validar longitud según tipo de documento
+        if (TipoDocumento == "DNI" && NumeroDocumento.Length != 8)
+        {
+            mensajeBusqueda = "El DNI debe tener 8 dígitos";
+            return;
+        }
+
+        buscandoDatos = true;
+        mensajeBusqueda = "";
+        
+        try
+        {
+            var datos = await VisitanteService.BuscarPorDocumentoAsync(NumeroDocumento);
+            
+            if (datos != null)
+            {
+                // Si encuentra datos, completar y MANTENER BLOQUEADOS
+                await NombresChanged.InvokeAsync(datos.Nombres);
+                await ApellidosChanged.InvokeAsync(datos.Apellidos);
+                camposHabilitados = false; // Mantener bloqueados
+                mensajeBusqueda = "✅ Datos encontrados y cargados (bloqueados)";
+            }
+            else
+            {
+                // Si NO encuentra datos, HABILITAR para que los complete manualmente
+                await NombresChanged.InvokeAsync("");
+                await ApellidosChanged.InvokeAsync("");
+                camposHabilitados = true; // Habilitar para edición manual
+                mensajeBusqueda = "ℹ️ No se encontraron datos previos. Puede ingresar los datos manualmente";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al buscar datos: {ex.Message}");
+            mensajeBusqueda = "❌ Error al buscar datos";
+            camposHabilitados = false; // Mantener bloqueados en caso de error
+        }
+        finally
+        {
+            buscandoDatos = false;
+        }
+    }
+
+    private async Task ValidarDocumento(ChangeEventArgs e)
+    {
+        var valor = e.Value?.ToString() ?? "";
+        errorDocumento = "";
+
+        if (TipoDocumento == "DNI")
+        {
+            // Solo números
+            if (!string.IsNullOrEmpty(valor) && !System.Text.RegularExpressions.Regex.IsMatch(valor, @"^\d+$"))
+            {
+                errorDocumento = "El DNI solo debe contener números";
+            }
+            else if (valor.Length > 8)
+            {
+                errorDocumento = "El DNI debe tener exactamente 8 dígitos";
+            }
+            else if (!string.IsNullOrEmpty(valor) && valor.Length < 8)
+            {
+                errorDocumento = $"Faltan {8 - valor.Length} dígitos";
+            }
+        }
+        else if (TipoDocumento == "CE")
+        {
+            // Alfanumérico
+            if (valor.Length > 12)
+            {
+                errorDocumento = "El Carnet de Extranjería no puede tener más de 12 caracteres";
+            }
+        }
+        
+        await NumeroDocumentoChanged.InvokeAsync(valor);
     }
 }

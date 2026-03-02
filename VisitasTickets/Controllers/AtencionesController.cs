@@ -6,6 +6,7 @@ using VisitasTickets.Domain.Dtos;
 using VisitasTickets.Domain.Entities;
 using VisitasTickets.Infrastructure.Persistence;
 using VisitasTickets.API.Hubs;
+using OfficeOpenXml;
 
 namespace VisitasTickets.API.Controllers
 {
@@ -31,6 +32,8 @@ namespace VisitasTickets.API.Controllers
                 .Include(a => a.IdTipoTramiteNavigation)
                 .Include(a => a.IdTipoPreferencialNavigation)
                 .Include(a => a.IdEstadoAtencionNavigation)
+                .Include(a => a.IdTipoTrabajoNavigation)
+                .Include(a => a.IdDetalleActividadNavigation)
                 .Include(a => a.IdUsuarioRegistroNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
                 .Include(a => a.IdUsuarioActualizaNavigation)
@@ -54,6 +57,10 @@ namespace VisitasTickets.API.Controllers
                     IdEstadoAtencion = a.IdEstadoAtencion,
                     NombreEstado = a.IdEstadoAtencionNavigation.NombreEstado,
                     OrdenEstado = a.IdEstadoAtencionNavigation.Orden,
+                    IdTipoTrabajo = a.IdTipoTrabajo,
+                    NombreTipoTrabajo = a.IdTipoTrabajoNavigation != null ? a.IdTipoTrabajoNavigation.NombreTipoTrabajo : null,
+                    IdDetalleActividad = a.IdDetalleActividad,
+                    NombreActividad = a.IdDetalleActividadNavigation != null ? a.IdDetalleActividadNavigation.NombreActividad : null,
                     FechaRegistro = a.FechaRegistro,
                     FechaActualizacion = a.FechaActualizacion,
                     IdUsuarioRegistro = a.IdUsuarioRegistro,
@@ -74,6 +81,8 @@ namespace VisitasTickets.API.Controllers
                 .Include(a => a.IdTipoTramiteNavigation)
                 .Include(a => a.IdTipoPreferencialNavigation)
                 .Include(a => a.IdEstadoAtencionNavigation)
+                .Include(a => a.IdTipoTrabajoNavigation)
+                .Include(a => a.IdDetalleActividadNavigation)
                 .Include(a => a.IdUsuarioRegistroNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
                 .Where(a => a.IdEstadoAtencionNavigation.Orden < 4) // Pendiente, En Ventanilla y En Pausa
@@ -97,6 +106,11 @@ namespace VisitasTickets.API.Controllers
                     IdEstadoAtencion = a.IdEstadoAtencion,
                     NombreEstado = a.IdEstadoAtencionNavigation.NombreEstado,
                     OrdenEstado = a.IdEstadoAtencionNavigation.Orden,
+                    IdTipoTrabajo = a.IdTipoTrabajo,
+                    NombreTipoTrabajo = a.IdTipoTrabajoNavigation != null ? a.IdTipoTrabajoNavigation.NombreTipoTrabajo : null,
+                    IdDetalleActividad = a.IdDetalleActividad,
+                    NombreActividad = a.IdDetalleActividadNavigation != null ? a.IdDetalleActividadNavigation.NombreActividad : null,
+                    NumeroExpediente = a.NumeroExpediente,
                     FechaRegistro = a.FechaRegistro,
                     FechaActualizacion = a.FechaActualizacion,
                     IdUsuarioRegistro = a.IdUsuarioRegistro,
@@ -122,6 +136,8 @@ namespace VisitasTickets.API.Controllers
                 .Include(a => a.IdTipoTramiteNavigation)
                 .Include(a => a.IdTipoPreferencialNavigation)
                 .Include(a => a.IdEstadoAtencionNavigation)
+                .Include(a => a.IdTipoTrabajoNavigation)
+                .Include(a => a.IdDetalleActividadNavigation)
                 .Include(a => a.IdUsuarioRegistroNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
                 .Include(a => a.IdUsuarioActualizaNavigation)
@@ -146,6 +162,11 @@ namespace VisitasTickets.API.Controllers
                     IdEstadoAtencion = a.IdEstadoAtencion,
                     NombreEstado = a.IdEstadoAtencionNavigation.NombreEstado,
                     OrdenEstado = a.IdEstadoAtencionNavigation.Orden,
+                    IdTipoTrabajo = a.IdTipoTrabajo,
+                    NombreTipoTrabajo = a.IdTipoTrabajoNavigation != null ? a.IdTipoTrabajoNavigation.NombreTipoTrabajo : null,
+                    IdDetalleActividad = a.IdDetalleActividad,
+                    NombreActividad = a.IdDetalleActividadNavigation != null ? a.IdDetalleActividadNavigation.NombreActividad : null,
+                    NumeroExpediente = a.NumeroExpediente,
                     FechaRegistro = a.FechaRegistro,
                     FechaActualizacion = a.FechaActualizacion,
                     IdUsuarioRegistro = a.IdUsuarioRegistro,
@@ -158,6 +179,94 @@ namespace VisitasTickets.API.Controllers
             return Ok(atenciones);
         }
 
+        // GET: api/atenciones/historial/excel - Generar reporte Excel del historial
+        [HttpGet("historial/excel")]
+        public async Task<IActionResult> DescargarHistorialExcel([FromQuery] int? usuarioId)
+        {
+            // Configurar licencia EPPlus (NonCommercial)
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            // Consultar atenciones del historial
+            var query = _context.UtdAtencions
+                .Include(a => a.IdTipoTramiteNavigation)
+                .Include(a => a.IdTipoPreferencialNavigation)
+                .Include(a => a.IdEstadoAtencionNavigation)
+                .Include(a => a.IdTipoTrabajoNavigation)
+                .Include(a => a.IdDetalleActividadNavigation)
+                .Include(a => a.IdUsuarioRegistroNavigation)
+                    .ThenInclude(u => u!.IdPersonalNavigation)
+                .Include(a => a.IdUsuarioActualizaNavigation)
+                    .ThenInclude(u => u!.IdPersonalNavigation)
+                .Where(a => a.IdEstadoAtencionNavigation.NombreEstado == "Atendido" || a.IdEstadoAtencionNavigation.NombreEstado == "Cancelado");
+
+            // Filtrar por usuario si se proporciona
+            if (usuarioId.HasValue)
+            {
+                query = query.Where(a => a.IdUsuarioActualiza == usuarioId.Value);
+            }
+
+            var atenciones = await query
+                .OrderByDescending(a => a.FechaActualizacion)
+                .ToListAsync();
+
+            // Crear archivo Excel
+            using (var package = new ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("Historial de Atenciones");
+
+                // Encabezados
+                worksheet.Cells[1, 1].Value = "FECHA";
+                worksheet.Cells[1, 2].Value = "HORA";
+                worksheet.Cells[1, 3].Value = "USUARIO QUE ATENDIÓ";
+                worksheet.Cells[1, 4].Value = "TIPO DE TRÁMITE";
+                worksheet.Cells[1, 5].Value = "NOMBRE COMPLETO";
+                worksheet.Cells[1, 6].Value = "DNI";
+                worksheet.Cells[1, 7].Value = "EXPEDIENTE";
+                worksheet.Cells[1, 8].Value = "DETALLE DE ACTIVIDAD";
+                worksheet.Cells[1, 9].Value = "OBSERVACIONES";
+                worksheet.Cells[1, 10].Value = "TIPO DE TRABAJO";
+
+                // Estilo de encabezados
+                using (var range = worksheet.Cells[1, 1, 1, 10])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(79, 70, 229)); // Indigo
+                    range.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                    range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                }
+
+                // Datos
+                int row = 2;
+                foreach (var atencion in atenciones)
+                {
+                    worksheet.Cells[row, 1].Value = atencion.FechaActualizacion?.ToString("dd/MM/yyyy") ?? "";
+                    worksheet.Cells[row, 2].Value = atencion.FechaActualizacion?.ToString("HH:mm:ss") ?? "";
+                    worksheet.Cells[row, 3].Value = atencion.IdUsuarioActualizaNavigation?.IdPersonalNavigation?.ApellidosNombrePer ?? "";
+                    worksheet.Cells[row, 4].Value = atencion.IdTipoTramiteNavigation?.NombreTramite ?? "";
+                    worksheet.Cells[row, 5].Value = $"{atencion.Apellidos} {atencion.Nombres}";
+                    worksheet.Cells[row, 6].Value = atencion.NumeroDocumento ?? "";
+                    worksheet.Cells[row, 7].Value = atencion.NumeroExpediente ?? "";
+                    worksheet.Cells[row, 8].Value = atencion.IdDetalleActividadNavigation?.NombreActividad ?? "";
+                    worksheet.Cells[row, 9].Value = atencion.ObservacionAtencion ?? "";
+                    worksheet.Cells[row, 10].Value = atencion.IdTipoTrabajoNavigation?.NombreTipoTrabajo ?? "";
+                    row++;
+                }
+
+                // Ajustar ancho de columnas
+                worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+                // Convertir a bytes
+                var excelBytes = package.GetAsByteArray();
+
+                // Nombre del archivo
+                var fileName = $"Historial_Atenciones_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+                // Devolver archivo
+                return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+        }
+
         // GET: api/atenciones/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<AtencionDto>> GetAtencion(int id)
@@ -166,6 +275,8 @@ namespace VisitasTickets.API.Controllers
                 .Include(a => a.IdTipoTramiteNavigation)
                 .Include(a => a.IdTipoPreferencialNavigation)
                 .Include(a => a.IdEstadoAtencionNavigation)
+                .Include(a => a.IdTipoTrabajoNavigation)
+                .Include(a => a.IdDetalleActividadNavigation)
                 .Include(a => a.IdUsuarioRegistroNavigation)
                     .ThenInclude(u => u!.IdPersonalNavigation)
                 .Include(a => a.IdUsuarioActualizaNavigation)
@@ -195,6 +306,11 @@ namespace VisitasTickets.API.Controllers
                 IdEstadoAtencion = atencion.IdEstadoAtencion,
                 NombreEstado = atencion.IdEstadoAtencionNavigation.NombreEstado,
                 OrdenEstado = atencion.IdEstadoAtencionNavigation.Orden,
+                IdTipoTrabajo = atencion.IdTipoTrabajo,
+                NombreTipoTrabajo = atencion.IdTipoTrabajoNavigation?.NombreTipoTrabajo,
+                IdDetalleActividad = atencion.IdDetalleActividad,
+                NombreActividad = atencion.IdDetalleActividadNavigation?.NombreActividad,
+                NumeroExpediente = atencion.NumeroExpediente,
                 FechaRegistro = atencion.FechaRegistro,
                 FechaActualizacion = atencion.FechaActualizacion,
                 IdUsuarioRegistro = atencion.IdUsuarioRegistro,
@@ -346,6 +462,24 @@ namespace VisitasTickets.API.Controllers
                 {
                     atencion.ObservacionAtencion = dto.ObservacionAtencion;
                 }
+
+                // Actualizar IdTipoTrabajo si viene en el DTO
+                if (dto.IdTipoTrabajo.HasValue)
+                {
+                    atencion.IdTipoTrabajo = dto.IdTipoTrabajo;
+                }
+
+                // Actualizar IdDetalleActividad si viene en el DTO
+                if (dto.IdDetalleActividad.HasValue)
+                {
+                    atencion.IdDetalleActividad = dto.IdDetalleActividad;
+                }
+
+                // Actualizar NumeroExpediente si viene en el DTO
+                if (dto.NumeroExpediente != null)
+                {
+                    atencion.NumeroExpediente = dto.NumeroExpediente;
+                }
                 
                 atencion.FechaActualizacion = fechaCambio;
                 atencion.IdUsuarioActualiza = userId;
@@ -455,6 +589,42 @@ namespace VisitasTickets.API.Controllers
                 .ToListAsync();
 
             return Ok(estados);
+        }
+
+        // GET: api/atenciones/tipos-trabajo
+        [HttpGet("tipos-trabajo")]
+        public async Task<ActionResult<IEnumerable<TipoTrabajoDto>>> GetTiposTrabajo()
+        {
+            var tiposTrabajo = await _context.UtdTipoTrabajos
+                .Where(t => t.Estado)
+                .OrderBy(t => t.IdTipoTrabajo)
+                .Select(t => new TipoTrabajoDto
+                {
+                    IdTipoTrabajo = t.IdTipoTrabajo,
+                    NombreTipoTrabajo = t.NombreTipoTrabajo,
+                    Descripcion = t.Descripcion
+                })
+                .ToListAsync();
+
+            return Ok(tiposTrabajo);
+        }
+
+        // GET: api/atenciones/detalles-actividad
+        [HttpGet("detalles-actividad")]
+        public async Task<ActionResult<IEnumerable<DetalleActividadDto>>> GetDetallesActividad()
+        {
+            var detallesActividad = await _context.UtdDetalleActividads
+                .Where(d => d.Estado)
+                .OrderBy(d => d.IdDetalleActividad)
+                .Select(d => new DetalleActividadDto
+                {
+                    IdDetalleActividad = d.IdDetalleActividad,
+                    NombreActividad = d.NombreActividad,
+                    Descripcion = d.Descripcion
+                })
+                .ToListAsync();
+
+            return Ok(detallesActividad);
         }
 
         // GET: api/atenciones/{id}/historial

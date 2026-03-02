@@ -72,6 +72,18 @@ namespace VisitasTickets.Client.Services
             return await _http.GetFromJsonAsync<List<EstadoAtencionDto>>("api/atenciones/estados") ?? new List<EstadoAtencionDto>();
         }
 
+        // Obtener tipos de trabajo
+        public async Task<List<TipoTrabajoDto>> GetTiposTrabajoAsync()
+        {
+            return await _http.GetFromJsonAsync<List<TipoTrabajoDto>>("api/atenciones/tipos-trabajo") ?? new List<TipoTrabajoDto>();
+        }
+
+        // Obtener detalles de actividad
+        public async Task<List<DetalleActividadDto>> GetDetallesActividadAsync()
+        {
+            return await _http.GetFromJsonAsync<List<DetalleActividadDto>>("api/atenciones/detalles-actividad") ?? new List<DetalleActividadDto>();
+        }
+
         // Obtener historial de una atención
         public async Task<List<HistorialAtencionDto>> GetHistorialAtencionAsync(int idAtencion)
         {
@@ -100,6 +112,37 @@ namespace VisitasTickets.Client.Services
         public async Task<List<AtencionDto>> GetMisAtencionesHoyAsync()
         {
             return await _http.GetFromJsonAsync<List<AtencionDto>>("api/dashboardusuario/mis-atenciones/hoy") ?? new List<AtencionDto>();
+        }
+
+        // Descargar reporte Excel del historial
+        public async Task<byte[]?> DescargarHistorialExcelAsync(int? usuarioId = null)
+        {
+            try
+            {
+                var url = usuarioId.HasValue 
+                    ? $"api/atenciones/historial/excel?usuarioId={usuarioId.Value}"
+                    : "api/atenciones/historial/excel";
+                
+                var response = await _http.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadAsByteArrayAsync();
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // Obtener URL del endpoint de descarga Excel
+        public string GetUrlDescargarExcel(int? usuarioId = null)
+        {
+            var baseUrl = _http.BaseAddress?.ToString().TrimEnd('/') ?? "";
+            return usuarioId.HasValue 
+                ? $"{baseUrl}/api/atenciones/historial/excel?usuarioId={usuarioId.Value}"
+                : $"{baseUrl}/api/atenciones/historial/excel";
         }
     }
 }

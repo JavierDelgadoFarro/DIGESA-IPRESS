@@ -26,9 +26,15 @@ namespace VisitasTickets.Domain.Entities
 
         public int IdEstadoAtencion { get; set; }
 
-        public DateTime FechaRegistro { get; set; }
+    public int? IdTipoTrabajo { get; set; }
 
-        public DateTime? FechaActualizacion { get; set; }
+    public int? IdDetalleActividad { get; set; }
+
+    public string? NumeroExpediente { get; set; }
+
+    public DateTime FechaRegistro { get; set; }
+
+    public DateTime? FechaActualizacion { get; set; }
 
         public int? IdUsuarioRegistro { get; set; }
 
@@ -40,8 +46,12 @@ namespace VisitasTickets.Domain.Entities
 
         public virtual UtdEstadoAtencion IdEstadoAtencionNavigation { get; set; } = null!;
 
-        public virtual AdmUsuario? IdUsuarioRegistroNavigation { get; set; }
+    public virtual UtdTipoTrabajo? IdTipoTrabajoNavigation { get; set; }
 
-        public virtual AdmUsuario? IdUsuarioActualizaNavigation { get; set; }
-    }
+    public virtual UtdDetalleActividad? IdDetalleActividadNavigation { get; set; }
+
+    public virtual AdmUsuario? IdUsuarioRegistroNavigation { get; set; }
+
+    public virtual AdmUsuario? IdUsuarioActualizaNavigation { get; set; }
+}
 }

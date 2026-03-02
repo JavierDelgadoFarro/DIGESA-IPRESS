@@ -19,12 +19,6 @@ namespace VisitasTickets.Client.Services
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            // Si ya tenemos un usuario en caché, devolverlo
-            if (_cachedUser != null)
-            {
-                return new AuthenticationState(_cachedUser);
-            }
-
             try
             {
                 var token = await _localStorage.GetItemAsync<string>("authToken");
@@ -63,11 +57,13 @@ namespace VisitasTickets.Client.Services
                 var identity = new ClaimsIdentity(claims, "jwt");
                 _cachedUser = new ClaimsPrincipal(identity);
 
+                Console.WriteLine($"GetAuthenticationStateAsync: Token válido recuperado del localStorage. Usuario autenticado.");
                 return new AuthenticationState(_cachedUser);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error en GetAuthenticationStateAsync: {ex.Message}");
+                _cachedUser = null;
                 return _anonymous;
             }
         }

@@ -1,7 +1,9 @@
 @page "/mi-turno/id/{IdAtencion:int}"
 @layout PublicLayout
+@attribute [AllowAnonymous]
 @using VisitasTickets.Domain.Dtos
 @using VisitasTickets.Client.Services
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @inject VisitanteService VisitanteService
 @inject VisitanteSignalRService SignalRService
@@ -41,15 +43,15 @@
                 
                 <!-- Header con estado -->
                 <div class="@GetColorClasePorEstado() p-8 text-white text-center relative">
-                    <!-- Número de orden destacado -->
-                    <div class="absolute top-4 right-4 bg-white bg-opacity-90 rounded-full w-16 h-16 flex items-center justify-center">
+                    <!-- Número de orden MUY DESTACADO para móviles -->
+                    <div class="absolute top-4 right-4 bg-white rounded-2xl shadow-2xl px-4 py-3 sm:px-6 sm:py-4">
                         <div class="text-center">
-                            <div class="text-xs text-gray-600 font-semibold">N°</div>
-                            <div class="text-2xl font-bold @(turno.NumeroOrden <= 3 ? "text-emerald-600" : "text-blue-600")">@turno.NumeroOrden</div>
+                            <div class="text-sm sm:text-base text-gray-600 font-bold mb-1">N°</div>
+                            <div class="text-5xl sm:text-6xl font-black @(turno.NumeroOrden <= 3 ? "text-emerald-600" : "text-blue-600") leading-none">@turno.NumeroOrden</div>
                         </div>
                     </div>
                     
-                    <div class="text-7xl mb-4">@GetEmojiPorEstado()</div>
+                    <div class="text-7xl mb-4 mt-8 sm:mt-0">@GetEmojiPorEstado()</div>
                     <h1 class="text-4xl font-bold mb-2">@GetTituloPorEstado()</h1>
                     <p class="text-xl opacity-90">@turno.NombreTramite</p>
                 </div>

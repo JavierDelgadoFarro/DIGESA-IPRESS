@@ -4,8 +4,14 @@
 @using VisitasTickets.Client.Services
 @using VisitasTickets.Client.Components.Common
 @using VisitasTickets.Domain.Dtos
+@using Microsoft.JSInterop
 @inject AtencionService AtencionService
 @inject NotificationService NotificationService
+@inject AuthService AuthService
+@inject SignalRService SignalRService
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>Historial de Atenciones - Sistema de Atenciones</PageTitle>
 
@@ -22,49 +28,61 @@
     <!-- Card con Filtros y Lista -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <!-- Filtros -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/30">
-            <!-- Buscador -->
-            <div class="flex-1 max-w-md">
-                <div class="relative">
-                    <input type="text"
-                           @bind="searchText"
-                           @bind:event="oninput"
-                           @bind:after="OnSearchChanged"
-                           placeholder="Buscar por nombre, apellido o documento..."
-                           class="w-full pl-4 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm bg-white text-slate-900 placeholder:text-slate-400">
-                    <svg class="absolute right-3 top-2.5 w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
+        <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/30">
+            <div class="flex flex-col lg:flex-row gap-4">
+                <!-- Buscador -->
+                <div class="flex-1 max-w-md">
+                    <div class="relative">
+                        <input type="text"
+                               @bind="searchText"
+                               @bind:event="oninput"
+                               @bind:after="OnSearchChanged"
+                               placeholder="Buscar por nombre, apellido o documento..."
+                               class="w-full pl-4 pr-10 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm bg-white text-slate-900 placeholder:text-slate-400">
+                        <svg class="absolute right-3 top-2.5 w-5 h-5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Filtros -->
-            <div class="flex items-center gap-3 flex-shrink-0">
-                <!-- Filtro por Estado -->
-                <select @bind="estadoFiltro" @bind:after="OnFiltroChanged"
-                        class="min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
-                    <option value="">Todos los estados</option>
-                    <option value="Atendido">✅ Atendido</option>
-                    <option value="Cancelado">❌ Cancelado</option>
-                </select>
+                <!-- Filtros -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Filtro por Estado -->
+                    <select @bind="estadoFiltro" @bind:after="OnFiltroChanged"
+                            class="min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
+                        <option value="">Todos los estados</option>
+                        <option value="Atendido">✅ Atendido</option>
+                        <option value="Cancelado">❌ Cancelado</option>
+                    </select>
 
-                <!-- Filtro Preferencial -->
-                <select @bind="preferencialFiltro" @bind:after="OnFiltroChanged"
-                        class="min-w-[140px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
-                    <option value="">Todos</option>
-                    <option value="preferencial">⭐ Preferenciales</option>
-                    <option value="normal">Normales</option>
-                </select>
+                    <!-- Filtro Preferencial -->
+                    <select @bind="preferencialFiltro" @bind:after="OnFiltroChanged"
+                            class="min-w-[140px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
+                        <option value="">Todos</option>
+                        <option value="preferencial">⭐ Preferenciales</option>
+                        <option value="normal">Normales</option>
+                    </select>
 
-                <!-- Filtro por Usuario Atendedor -->
-                <select @bind="usuarioFiltro" @bind:after="OnFiltroChanged"
-                        class="min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700">
-                    <option value="">Todos los usuarios</option>
-                    @foreach (var usuario in UsuariosQueAtendieron)
-                    {
-                        <option value="@usuario.Id">@usuario.Nombre</option>
-                    }
-                </select>
+                    <!-- Filtro por Usuario Atendedor -->
+                    <select @bind="usuarioFiltro" @bind:after="OnFiltroChanged"
+                            disabled="@(!esAdministrador)"
+                            class="min-w-[180px] px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-all text-slate-700 @(esAdministrador ? "" : "opacity-60 cursor-not-allowed")">
+                        <option value="">Todos los usuarios</option>
+                        @foreach (var usuario in UsuariosQueAtendieron)
+                        {
+                            <option value="@usuario.Id">@usuario.Nombre</option>
+                        }
+                    </select>
+
+                    <!-- Botón Descargar Excel -->
+                    <button @onclick="DescargarExcel"
+                            class="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg shadow-sm transition-all duration-200 flex items-center gap-2 text-sm whitespace-nowrap">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Descargar Excel
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -309,6 +327,34 @@
                                                 </div>
                                             }
 
+                                             <!-- Tipo de Trabajo -->
+                                            @if (!string.IsNullOrEmpty(atencion.NombreTipoTrabajo))
+                                            {
+                                                <div class="bg-white rounded-lg p-3 border border-gray-200">
+                                                    <p class="text-xs text-gray-500 mb-1">Tipo de Trabajo</p>
+                                                    <p class="text-sm font-semibold text-gray-900">@atencion.NombreTipoTrabajo</p>
+                                                </div>
+                                            }
+
+                                            
+                                            <!-- Detalle de Actividad -->
+                                            @if (!string.IsNullOrEmpty(atencion.NombreActividad))
+                                            {
+                                                <div class="bg-white rounded-lg p-3 border border-gray-200">
+                                                    <p class="text-xs text-gray-500 mb-1">Detalle de Actividad</p>
+                                                    <p class="text-sm font-semibold text-gray-900">@atencion.NombreActividad</p>
+                                                </div>
+                                            }
+
+                                            <!-- Número de Expediente -->
+                                            @if (!string.IsNullOrEmpty(atencion.NumeroExpediente))
+                                            {
+                                                <div class="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
+                                                    <p class="text-xs text-indigo-700 mb-1">Número de Expediente</p>
+                                                    <p class="text-sm font-bold text-indigo-900">@atencion.NumeroExpediente</p>
+                                                </div>
+                                            }
+
                                             @if (!string.IsNullOrEmpty(atencion.ObservacionAtencion))
                                             {
                                                 <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
@@ -429,6 +475,8 @@
     private bool isLoading = false;
     private int? atencionExpandida = null;
     private bool cargandoHistorial = false;
+    private bool esAdministrador = false;
+    private int? usuarioActualId = null;
 
     // Paginación
     private int paginaActual = 1;
@@ -440,7 +488,83 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await VerificarPermisos();
         await CargarDatos();
+
+        // Asegurar que SignalR esté conectado
+        if (!SignalRService.IsConnected)
+        {
+            Console.WriteLine("Atendidos: SignalR no conectado, iniciando conexión...");
+            await SignalRService.IniciarConexionAsync();
+        }
+
+        Console.WriteLine($"Atendidos: Estado de conexión SignalR: {SignalRService.IsConnected}");
+
+        // Suscribirse a eventos de SignalR para actualizar cuando se finaliza o cancela una atención
+        SignalRService.OnCambioEstadoAtencion += async (idAtencion) =>
+        {
+            Console.WriteLine($"Atendidos: Evento OnCambioEstadoAtencion recibido para ID: {idAtencion}");
+            await InvokeAsync(async () =>
+            {
+                await CargarDatos();
+                StateHasChanged();
+            });
+        };
+    }
+
+    private async Task VerificarPermisos()
+    {
+        try
+        {
+            // Obtener el ID del usuario actual
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userIdClaim = user.FindFirst("UsuarioId");
+            
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+            {
+                usuarioActualId = userId;
+            }
+
+            // Obtener accesos del usuario
+            var accesos = await AuthService.GetAccesosAsync();
+            
+            if (accesos != null && accesos.Modulos != null)
+            {
+                // Verificar si tiene acceso al dashboard de administrador
+                esAdministrador = accesos.Modulos.Any(m => 
+                    m.Menus?.Any(menu => 
+                        menu.SubMenus?.Any(sm => 
+                            sm.Ruta != null && sm.Ruta.Contains("/dashboard/admin")
+                        ) ?? false
+                    ) ?? false
+                );
+            }
+
+            // Establecer filtro según permisos
+            if (esAdministrador)
+            {
+                // Si es administrador, NO filtrar por usuario (mostrar todos)
+                usuarioFiltro = "";
+            }
+            else if (usuarioActualId.HasValue)
+            {
+                // Si NO es administrador, filtrar solo por su usuario
+                usuarioFiltro = usuarioActualId.Value.ToString();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al verificar permisos: {ex.Message}");
+            // Por defecto, si hay error, asumir que no es admin y filtrar por usuario actual
+            esAdministrador = false;
+            if (usuarioActualId.HasValue)
+            {
+                usuarioFiltro = usuarioActualId.Value.ToString();
+            }
+        }
+        
+        Console.WriteLine($"VerificarPermisos: esAdministrador={esAdministrador}, usuarioActualId={usuarioActualId}, usuarioFiltro='{usuarioFiltro}'");
     }
 
     private async Task CargarDatos()
@@ -704,5 +828,53 @@
         paginaActual = 1;
         atencionExpandida = null;
         StateHasChanged();
+    }
+
+    private async Task DescargarExcel()
+    {
+        try
+        {
+            // Determinar el usuarioId a filtrar
+            int? filtroUsuarioId = null;
+            
+            // Si hay un filtro de usuario aplicado, usar ese
+            if (!string.IsNullOrEmpty(usuarioFiltro) && int.TryParse(usuarioFiltro, out int userId))
+            {
+                filtroUsuarioId = userId;
+            }
+            // Si no es administrador, filtrar por el usuario actual
+            else if (!esAdministrador && usuarioActualId.HasValue)
+            {
+                filtroUsuarioId = usuarioActualId.Value;
+            }
+            // Si es administrador y no hay filtro, obtener todo (null)
+
+            var excelBytes = await AtencionService.DescargarHistorialExcelAsync(filtroUsuarioId);
+            
+            if (excelBytes != null)
+            {
+                var fileName = $"Historial_Atenciones_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                var base64 = Convert.ToBase64String(excelBytes);
+                await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, base64);
+                
+                // Mostrar notificación de éxito
+                NotificationService.ShowSuccess("Excel descargado exitosamente");
+            }
+            else
+            {
+                NotificationService.ShowError("Error al generar el archivo Excel");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al descargar Excel: {ex.Message}");
+            NotificationService.ShowError("Error al descargar el archivo");
+        }
+    }
+
+    public void Dispose()
+    {
+        // Desuscribirse de eventos SignalR
+        SignalRService.OnCambioEstadoAtencion -= async (idAtencion) => await CargarDatos();
     }
 }

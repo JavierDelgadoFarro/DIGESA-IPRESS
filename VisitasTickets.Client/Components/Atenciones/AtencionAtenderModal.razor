@@ -77,6 +77,58 @@
                     </div>
                 }
 
+                <!-- Selectores de Tipo de Trabajo y Detalle de Actividad -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <!-- Tipo de Trabajo -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Tipo de Trabajo <span class="text-rose-600">*</span>
+                        </label>
+                        <select @bind="idTipoTrabajo"
+                                @bind:after="OnTipoTrabajoChanged"
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="0">Seleccione tipo de trabajo</option>
+                            @foreach (var tipo in TiposTrabajo)
+                            {
+                                <option value="@tipo.IdTipoTrabajo">@tipo.NombreTipoTrabajo</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Detalle de Actividad -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Detalle de Actividad <span class="text-rose-600">*</span>
+                        </label>
+                        <select @bind="idDetalleActividad"
+                                @bind:after="OnDetalleActividadChanged"
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="0">Seleccione actividad</option>
+                            @foreach (var detalle in DetallesActividad)
+                            {
+                                <option value="@detalle.IdDetalleActividad">@detalle.NombreActividad</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Campo de Número de Expediente (condicional) -->
+                @if (MostrarNumeroExpediente)
+                {
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Número de Expediente <span class="text-rose-600">*</span>
+                        </label>
+                        <input type="text"
+                               @bind="numeroExpediente"
+                               @bind:event="oninput"
+                               @bind:after="OnNumeroExpedienteChanged"
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Ingrese el número de expediente"
+                               maxlength="50" />
+                    </div>
+                }
+
                 <div class="mb-2">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         @TituloObservacion <span class="text-rose-600">*</span>
@@ -183,7 +235,21 @@
     [Parameter] public EventCallback OnContinuar { get; set; }
     [Parameter] public EventCallback OnCancelar { get; set; }
 
+    // Nuevos parámetros para Tipo de Trabajo y Detalle de Actividad
+    [Parameter] public List<TipoTrabajoDto> TiposTrabajo { get; set; } = new();
+    [Parameter] public List<DetalleActividadDto> DetallesActividad { get; set; } = new();
+    [Parameter] public int IdTipoTrabajo { get; set; }
+    [Parameter] public EventCallback<int> IdTipoTrabajoChanged { get; set; }
+    [Parameter] public int IdDetalleActividad { get; set; }
+    [Parameter] public EventCallback<int> IdDetalleActividadChanged { get; set; }
+    [Parameter] public string NumeroExpediente { get; set; } = "";
+    [Parameter] public EventCallback<string> NumeroExpedienteChanged { get; set; }
+    [Parameter] public bool MostrarNumeroExpediente { get; set; }
+
     private string observacion = "";
+    private int idTipoTrabajo = 0;
+    private int idDetalleActividad = 0;
+    private string numeroExpediente = "";
     private int caracteresRestantes => 1000 - (observacion?.Length ?? 0);
     private Timer? timer;
     private int tiempoActivoSegundos = 0;
@@ -192,6 +258,9 @@
     protected override void OnParametersSet()
     {
         observacion = Observacion ?? "";
+        idTipoTrabajo = IdTipoTrabajo;
+        idDetalleActividad = IdDetalleActividad;
+        numeroExpediente = NumeroExpediente ?? "";
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -271,6 +340,21 @@
     {
         observacion = e.Value?.ToString() ?? "";
         await ObservacionChanged.InvokeAsync(observacion);
+    }
+
+    private async Task OnTipoTrabajoChanged()
+    {
+        await IdTipoTrabajoChanged.InvokeAsync(idTipoTrabajo);
+    }
+
+    private async Task OnDetalleActividadChanged()
+    {
+        await IdDetalleActividadChanged.InvokeAsync(idDetalleActividad);
+    }
+
+    private async Task OnNumeroExpedienteChanged()
+    {
+        await NumeroExpedienteChanged.InvokeAsync(numeroExpediente);
     }
 
     private async Task HandleConfirm()

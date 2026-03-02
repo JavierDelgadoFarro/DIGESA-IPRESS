@@ -39,6 +39,10 @@ namespace VisitasTickets.Infrastructure.Persistence
 
         public virtual DbSet<UtdTipoPreferencial> UtdTipoPreferencials { get; set; }
 
+        public virtual DbSet<UtdTipoTrabajo> UtdTipoTrabajos { get; set; }
+
+        public virtual DbSet<UtdDetalleActividad> UtdDetalleActividads { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<AdmArea>(entity =>
@@ -368,6 +372,50 @@ namespace VisitasTickets.Infrastructure.Persistence
                     .HasColumnName("FECHA_CREACION");
             });
 
+            modelBuilder.Entity<UtdTipoTrabajo>(entity =>
+            {
+                entity.HasKey(e => e.IdTipoTrabajo);
+
+                entity.ToTable("UTD_TIPO_TRABAJO");
+
+                entity.Property(e => e.IdTipoTrabajo).HasColumnName("ID_TIPO_TRABAJO");
+                entity.Property(e => e.NombreTipoTrabajo)
+                    .HasMaxLength(100)
+                    .IsUnicode(false)
+                    .HasColumnName("NOMBRE_TIPO_TRABAJO");
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(500)
+                    .IsUnicode(false)
+                    .HasColumnName("DESCRIPCION");
+                entity.Property(e => e.Estado).HasColumnName("ESTADO");
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_CREACION");
+            });
+
+            modelBuilder.Entity<UtdDetalleActividad>(entity =>
+            {
+                entity.HasKey(e => e.IdDetalleActividad);
+
+                entity.ToTable("UTD_DETALLE_ACTIVIDAD");
+
+                entity.Property(e => e.IdDetalleActividad).HasColumnName("ID_DETALLE_ACTIVIDAD");
+                entity.Property(e => e.NombreActividad)
+                    .HasMaxLength(200)
+                    .IsUnicode(false)
+                    .HasColumnName("NOMBRE_ACTIVIDAD");
+                entity.Property(e => e.Descripcion)
+                    .HasMaxLength(500)
+                    .IsUnicode(false)
+                    .HasColumnName("DESCRIPCION");
+                entity.Property(e => e.Estado).HasColumnName("ESTADO");
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasColumnType("datetime")
+                    .HasColumnName("FECHA_CREACION");
+            });
+
             modelBuilder.Entity<UtdAtencion>(entity =>
             {
                 entity.HasKey(e => e.IdAtencion);
@@ -408,6 +456,12 @@ namespace VisitasTickets.Infrastructure.Persistence
                 entity.Property(e => e.EsPreferencial).HasColumnName("ES_PREFERENCIAL");
                 entity.Property(e => e.IdTipoPreferencial).HasColumnName("ID_TIPO_PREFERENCIAL");
                 entity.Property(e => e.IdEstadoAtencion).HasColumnName("ID_ESTADO_ATENCION");
+                entity.Property(e => e.IdTipoTrabajo).HasColumnName("ID_TIPO_TRABAJO");
+                entity.Property(e => e.IdDetalleActividad).HasColumnName("ID_DETALLE_ACTIVIDAD");
+                entity.Property(e => e.NumeroExpediente)
+                    .HasMaxLength(50)
+                    .IsUnicode(false)
+                    .HasColumnName("NUMERO_EXPEDIENTE");
                 entity.Property(e => e.FechaRegistro)
                     .HasDefaultValueSql("(getdate())")
                     .HasColumnType("datetime")
@@ -431,6 +485,14 @@ namespace VisitasTickets.Infrastructure.Persistence
                     .HasForeignKey(d => d.IdEstadoAtencion)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_Atenciones_EstadoAtencion");
+
+                entity.HasOne(d => d.IdTipoTrabajoNavigation).WithMany(p => p.UtdAtencions)
+                    .HasForeignKey(d => d.IdTipoTrabajo)
+                    .HasConstraintName("FK_Atenciones_TipoTrabajo");
+
+                entity.HasOne(d => d.IdDetalleActividadNavigation).WithMany(p => p.UtdAtencions)
+                    .HasForeignKey(d => d.IdDetalleActividad)
+                    .HasConstraintName("FK_Atenciones_DetalleActividad");
 
                 entity.HasOne(d => d.IdUsuarioRegistroNavigation).WithMany()
                     .HasForeignKey(d => d.IdUsuarioRegistro)

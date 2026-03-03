@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using VisitasTickets.Domain.Entities;
@@ -27,21 +27,6 @@ namespace VisitasTickets.Infrastructure.Persistence
         public virtual DbSet<AdmSubMenu> AdmSubMenus { get; set; }
 
         public virtual DbSet<AdmUsuario> AdmUsuarios { get; set; }
-
-        // Atenciones
-        public virtual DbSet<UtdAtencion> UtdAtencions { get; set; }
-
-        public virtual DbSet<UtdHistorialAtencion> UtdHistorialAtencions { get; set; }
-
-        public virtual DbSet<UtdEstadoAtencion> UtdEstadoAtencions { get; set; }
-
-        public virtual DbSet<UtdTipoTramite> UtdTipoTramites { get; set; }
-
-        public virtual DbSet<UtdTipoPreferencial> UtdTipoPreferencials { get; set; }
-
-        public virtual DbSet<UtdTipoTrabajo> UtdTipoTrabajos { get; set; }
-
-        public virtual DbSet<UtdDetalleActividad> UtdDetalleActividads { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -136,11 +121,7 @@ namespace VisitasTickets.Infrastructure.Persistence
             {
                 entity.HasKey(e => e.IdPersonal).HasName("PK_Personal");
 
-                entity.ToTable("ADM_Personal", tb => tb.HasTrigger("ADM_Personal_ChangeTracking"));
-
-                entity.HasIndex(e => e.ApellidosNombrePer, "IndNcApellidosNombresper29092018").HasFillFactor(90);
-
-                entity.HasIndex(e => e.IdPersonal, "_dta_index_ADM_Personal_5_860582154__K1_7_29092018").HasFillFactor(90);
+                entity.ToTable("ADM_Personal");
 
                 entity.Property(e => e.IdPersonal)
                     .ValueGeneratedNever()
@@ -283,7 +264,7 @@ namespace VisitasTickets.Infrastructure.Persistence
             {
                 entity.HasKey(e => e.IdUsuario).HasName("PK_Usuario");
 
-                entity.ToTable("ADM_Usuario", tb => tb.HasTrigger("ADM_Usuario_ChangeTracking"));
+                entity.ToTable("ADM_Usuario");
 
                 entity.Property(e => e.IdUsuario).HasColumnName("ID_USUARIO");
                 entity.Property(e => e.ContrasenaUsu)
@@ -302,248 +283,6 @@ namespace VisitasTickets.Infrastructure.Persistence
                 entity.HasOne(d => d.IdPersonalNavigation).WithMany(p => p.AdmUsuarios)
                     .HasForeignKey(d => d.IdPersonal)
                     .HasConstraintName("FK_Usuario_Personal");
-            });
-
-            // Configuración de Atenciones
-            modelBuilder.Entity<UtdEstadoAtencion>(entity =>
-            {
-                entity.HasKey(e => e.IdEstadoAtencion);
-
-                entity.ToTable("UTD_ESTADO_ATENCION");
-
-                entity.Property(e => e.IdEstadoAtencion).HasColumnName("ID_ESTADO_ATENCION");
-                entity.Property(e => e.NombreEstado)
-                    .HasMaxLength(50)
-                    .IsUnicode(false)
-                    .HasColumnName("NOMBRE_ESTADO");
-                entity.Property(e => e.Orden).HasColumnName("ORDEN");
-                entity.Property(e => e.Descripcion)
-                    .HasMaxLength(200)
-                    .IsUnicode(false)
-                    .HasColumnName("DESCRIPCION");
-                entity.Property(e => e.Estado).HasColumnName("ESTADO");
-                entity.Property(e => e.FechaCreacion)
-                    .HasDefaultValueSql("(getdate())")
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_CREACION");
-            });
-
-            modelBuilder.Entity<UtdTipoTramite>(entity =>
-            {
-                entity.HasKey(e => e.IdTipoTramite);
-
-                entity.ToTable("UTD_TIPO_TRAMITE");
-
-                entity.Property(e => e.IdTipoTramite).HasColumnName("ID_TIPO_TRAMITE");
-                entity.Property(e => e.NombreTramite)
-                    .HasMaxLength(100)
-                    .IsUnicode(false)
-                    .HasColumnName("NOMBRE_TRAMITE");
-                entity.Property(e => e.Descripcion)
-                    .HasMaxLength(500)
-                    .IsUnicode(false)
-                    .HasColumnName("DESCRIPCION");
-                entity.Property(e => e.Estado).HasColumnName("ESTADO");
-                entity.Property(e => e.FechaCreacion)
-                    .HasDefaultValueSql("(getdate())")
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_CREACION");
-            });
-
-            modelBuilder.Entity<UtdTipoPreferencial>(entity =>
-            {
-                entity.HasKey(e => e.IdTipoPreferencial);
-
-                entity.ToTable("UTD_TIPO_PREFERENCIAL");
-
-                entity.Property(e => e.IdTipoPreferencial).HasColumnName("ID_TIPO_PREFERENCIAL");
-                entity.Property(e => e.NombreTipoPreferencial)
-                    .HasMaxLength(100)
-                    .IsUnicode(false)
-                    .HasColumnName("NOMBRE_TIPO_PREFERENCIAL");
-                entity.Property(e => e.Descripcion)
-                    .HasMaxLength(200)
-                    .IsUnicode(false)
-                    .HasColumnName("DESCRIPCION");
-                entity.Property(e => e.Estado).HasColumnName("ESTADO");
-                entity.Property(e => e.FechaCreacion)
-                    .HasDefaultValueSql("(getdate())")
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_CREACION");
-            });
-
-            modelBuilder.Entity<UtdTipoTrabajo>(entity =>
-            {
-                entity.HasKey(e => e.IdTipoTrabajo);
-
-                entity.ToTable("UTD_TIPO_TRABAJO");
-
-                entity.Property(e => e.IdTipoTrabajo).HasColumnName("ID_TIPO_TRABAJO");
-                entity.Property(e => e.NombreTipoTrabajo)
-                    .HasMaxLength(100)
-                    .IsUnicode(false)
-                    .HasColumnName("NOMBRE_TIPO_TRABAJO");
-                entity.Property(e => e.Descripcion)
-                    .HasMaxLength(500)
-                    .IsUnicode(false)
-                    .HasColumnName("DESCRIPCION");
-                entity.Property(e => e.Estado).HasColumnName("ESTADO");
-                entity.Property(e => e.FechaCreacion)
-                    .HasDefaultValueSql("(getdate())")
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_CREACION");
-            });
-
-            modelBuilder.Entity<UtdDetalleActividad>(entity =>
-            {
-                entity.HasKey(e => e.IdDetalleActividad);
-
-                entity.ToTable("UTD_DETALLE_ACTIVIDAD");
-
-                entity.Property(e => e.IdDetalleActividad).HasColumnName("ID_DETALLE_ACTIVIDAD");
-                entity.Property(e => e.NombreActividad)
-                    .HasMaxLength(200)
-                    .IsUnicode(false)
-                    .HasColumnName("NOMBRE_ACTIVIDAD");
-                entity.Property(e => e.Descripcion)
-                    .HasMaxLength(500)
-                    .IsUnicode(false)
-                    .HasColumnName("DESCRIPCION");
-                entity.Property(e => e.Estado).HasColumnName("ESTADO");
-                entity.Property(e => e.FechaCreacion)
-                    .HasDefaultValueSql("(getdate())")
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_CREACION");
-            });
-
-            modelBuilder.Entity<UtdAtencion>(entity =>
-            {
-                entity.HasKey(e => e.IdAtencion);
-
-                entity.ToTable("UTD_ATENCIONES");
-
-                entity.HasIndex(e => e.IdEstadoAtencion, "IX_Atenciones_Estado");
-                entity.HasIndex(e => e.FechaRegistro, "IX_Atenciones_FechaRegistro");
-                entity.HasIndex(e => e.NumeroDocumento, "IX_Atenciones_NumeroDocumento");
-                entity.HasIndex(e => e.IdTipoTramite, "IX_Atenciones_TipoTramite");
-
-                entity.Property(e => e.IdAtencion).HasColumnName("ID_ATENCION");
-                entity.Property(e => e.TipoDocumento)
-                    .HasMaxLength(10)
-                    .IsUnicode(false)
-                    .HasColumnName("TIPO_DOCUMENTO");
-                entity.Property(e => e.NumeroDocumento)
-                    .HasMaxLength(20)
-                    .IsUnicode(false)
-                    .HasColumnName("NUMERO_DOCUMENTO");
-                entity.Property(e => e.Nombres)
-                    .HasMaxLength(150)
-                    .IsUnicode(false)
-                    .HasColumnName("NOMBRES");
-                entity.Property(e => e.Apellidos)
-                    .HasMaxLength(150)
-                    .IsUnicode(false)
-                    .HasColumnName("APELLIDOS");
-                entity.Property(e => e.IdTipoTramite).HasColumnName("ID_TIPO_TRAMITE");
-                entity.Property(e => e.Observacion)
-                    .HasMaxLength(500)
-                    .IsUnicode(false)
-                    .HasColumnName("OBSERVACION");
-                entity.Property(e => e.ObservacionAtencion)
-                    .HasMaxLength(1000)
-                    .IsUnicode(false)
-                    .HasColumnName("OBSERVACION_ATENCION");
-                entity.Property(e => e.EsPreferencial).HasColumnName("ES_PREFERENCIAL");
-                entity.Property(e => e.IdTipoPreferencial).HasColumnName("ID_TIPO_PREFERENCIAL");
-                entity.Property(e => e.IdEstadoAtencion).HasColumnName("ID_ESTADO_ATENCION");
-                entity.Property(e => e.IdTipoTrabajo).HasColumnName("ID_TIPO_TRABAJO");
-                entity.Property(e => e.IdDetalleActividad).HasColumnName("ID_DETALLE_ACTIVIDAD");
-                entity.Property(e => e.NumeroExpediente)
-                    .HasMaxLength(50)
-                    .IsUnicode(false)
-                    .HasColumnName("NUMERO_EXPEDIENTE");
-                entity.Property(e => e.FechaRegistro)
-                    .HasDefaultValueSql("(getdate())")
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_REGISTRO");
-                entity.Property(e => e.FechaActualizacion)
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_ACTUALIZACION");
-                entity.Property(e => e.IdUsuarioRegistro).HasColumnName("ID_USUARIO_REGISTRO");
-                entity.Property(e => e.IdUsuarioActualiza).HasColumnName("ID_USUARIO_ACTUALIZA");
-
-                entity.HasOne(d => d.IdTipoTramiteNavigation).WithMany(p => p.UtdAtencions)
-                    .HasForeignKey(d => d.IdTipoTramite)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Atenciones_TipoTramite");
-
-                entity.HasOne(d => d.IdTipoPreferencialNavigation).WithMany(p => p.UtdAtencions)
-                    .HasForeignKey(d => d.IdTipoPreferencial)
-                    .HasConstraintName("FK_Atenciones_TipoPreferencial");
-
-                entity.HasOne(d => d.IdEstadoAtencionNavigation).WithMany(p => p.UtdAtencions)
-                    .HasForeignKey(d => d.IdEstadoAtencion)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_Atenciones_EstadoAtencion");
-
-                entity.HasOne(d => d.IdTipoTrabajoNavigation).WithMany(p => p.UtdAtencions)
-                    .HasForeignKey(d => d.IdTipoTrabajo)
-                    .HasConstraintName("FK_Atenciones_TipoTrabajo");
-
-                entity.HasOne(d => d.IdDetalleActividadNavigation).WithMany(p => p.UtdAtencions)
-                    .HasForeignKey(d => d.IdDetalleActividad)
-                    .HasConstraintName("FK_Atenciones_DetalleActividad");
-
-                entity.HasOne(d => d.IdUsuarioRegistroNavigation).WithMany()
-                    .HasForeignKey(d => d.IdUsuarioRegistro)
-                    .HasConstraintName("FK_Atenciones_UsuarioRegistro");
-
-                entity.HasOne(d => d.IdUsuarioActualizaNavigation).WithMany()
-                    .HasForeignKey(d => d.IdUsuarioActualiza)
-                    .HasConstraintName("FK_Atenciones_UsuarioActualiza");
-            });
-
-            modelBuilder.Entity<UtdHistorialAtencion>(entity =>
-            {
-                entity.HasKey(e => e.IdHistorial);
-
-                entity.ToTable("UTD_HISTORIAL_ATENCIONES");
-
-                entity.HasIndex(e => new { e.IdAtencion, e.FechaCambio }, "IX_HISTORIAL_ATENCION");
-                entity.HasIndex(e => new { e.IdEstadoNuevo, e.FechaCambio }, "IX_HISTORIAL_ESTADO");
-
-                entity.Property(e => e.IdHistorial).HasColumnName("ID_HISTORIAL");
-                entity.Property(e => e.IdAtencion).HasColumnName("ID_ATENCION");
-                entity.Property(e => e.IdEstadoAnterior).HasColumnName("ID_ESTADO_ANTERIOR");
-                entity.Property(e => e.IdEstadoNuevo).HasColumnName("ID_ESTADO_NUEVO");
-                entity.Property(e => e.IdUsuario).HasColumnName("ID_USUARIO");
-                entity.Property(e => e.FechaCambio)
-                    .HasDefaultValueSql("(getdate())")
-                    .HasColumnType("datetime")
-                    .HasColumnName("FECHA_CAMBIO");
-                entity.Property(e => e.Observacion)
-                    .HasMaxLength(1000)
-                    .IsUnicode(false)
-                    .HasColumnName("OBSERVACION");
-                entity.Property(e => e.TiempoEnEstadoAnterior).HasColumnName("TIEMPO_EN_ESTADO_ANTERIOR");
-
-                entity.HasOne(d => d.IdAtencionNavigation).WithMany()
-                    .HasForeignKey(d => d.IdAtencion)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_HISTORIAL_ATENCION");
-
-                entity.HasOne(d => d.IdEstadoAnteriorNavigation).WithMany()
-                    .HasForeignKey(d => d.IdEstadoAnterior)
-                    .HasConstraintName("FK_HISTORIAL_ESTADO_ANTERIOR");
-
-                entity.HasOne(d => d.IdEstadoNuevoNavigation).WithMany()
-                    .HasForeignKey(d => d.IdEstadoNuevo)
-                    .OnDelete(DeleteBehavior.ClientSetNull)
-                    .HasConstraintName("FK_HISTORIAL_ESTADO_NUEVO");
-
-                entity.HasOne(d => d.IdUsuarioNavigation).WithMany()
-                    .HasForeignKey(d => d.IdUsuario)
-                    .HasConstraintName("FK_HISTORIAL_USUARIO");
             });
 
             OnModelCreatingPartial(modelBuilder);

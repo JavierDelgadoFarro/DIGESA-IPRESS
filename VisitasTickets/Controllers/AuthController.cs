@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VisitasTickets.Infrastructure.Persistence;
-using VisitasTickets.Application.Services;
+using VisitasTickets.Application.Interfaces;
 using VisitasTickets.Domain.Dtos;
 
 namespace VisitasTickets.API.Controllers
@@ -12,9 +12,9 @@ namespace VisitasTickets.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly AuthService _authService;
+        private readonly IAuthService _authService;
 
-        public AuthController(AppDbContext context, AuthService authService)
+        public AuthController(AppDbContext context, IAuthService authService)
         {
             _context = context;
             _authService = authService;

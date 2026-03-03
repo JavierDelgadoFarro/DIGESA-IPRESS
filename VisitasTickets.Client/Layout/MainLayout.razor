@@ -1,9 +1,8 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject AuthService AuthService
 @inject NavigationManager NavManager
 @inject AuthenticationStateProvider AuthProvider
 @inject ILocalStorageService _localStorage
-@inject SignalRService SignalRService
 @using Microsoft.AspNetCore.Components.Authorization
 @using Blazored.LocalStorage
 @using VisitasTickets.Client.Services
@@ -29,8 +28,8 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="font-bold text-gray-900 text-lg">Sistema</p>
-                    <p class="text-xs text-gray-500">Gestión de Visitas</p>
+                    <p class="font-bold text-gray-900 text-lg">DIGESA-IPRESS</p>
+                    <p class="text-xs text-gray-500">Sistema de Gestión</p>
                 </div>
             </div>
 
@@ -67,6 +66,17 @@
                         </div>
                     </div>
                 }
+            }
+            else if (Accesos != null && !Accesos.Modulos.Any())
+            {
+                <div class="mb-6">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 px-3">Principal</p>
+                    <a href="/principal" @onclick="OnMenuItemClick"
+                       class="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-all group @GetActiveClass("/principal")">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                        <span class="flex-1">Inicio</span>
+                    </a>
+                </div>
             }
             else
             {
@@ -168,11 +178,6 @@
             Accesos = await AuthService.GetAccesosAsync();
             currentPath = NavManager.ToBaseRelativePath(NavManager.Uri);
             NavManager.LocationChanged += OnLocationChanged;
-
-            // Iniciar conexión SignalR
-            Console.WriteLine("MainLayout: Iniciando conexión SignalR...");
-            await SignalRService.IniciarConexionAsync();
-            Console.WriteLine($"MainLayout: Estado de conexión SignalR: {SignalRService.IsConnected}");
         }
         catch (Exception ex)
         {
@@ -199,9 +204,6 @@
 
     private async Task Logout()
     {
-        // Detener conexión SignalR antes de cerrar sesión
-        await SignalRService.DetenerConexionAsync();
-        
         await _localStorage.RemoveItemAsync("authToken");
         ((CustomAuthStateProvider)AuthProvider).NotifyUserLogout();
         NavManager.NavigateTo("/login", forceLoad: true);
@@ -276,6 +278,5 @@
     public void Dispose()
     {
         NavManager.LocationChanged -= OnLocationChanged;
-        // El SignalRService se limpiará automáticamente al ser Singleton con IAsyncDisposable
     }
 }

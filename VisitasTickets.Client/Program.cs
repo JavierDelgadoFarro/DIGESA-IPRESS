@@ -26,11 +26,7 @@ namespace VisitasTickets.Client
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 
             builder.Services.AddScoped<UsuarioService>();
-            builder.Services.AddScoped<AtencionService>();
-            builder.Services.AddScoped<VisitanteService>();
             builder.Services.AddSingleton<NotificationService>();
-            builder.Services.AddScoped<SignalRService>();
-            builder.Services.AddScoped<VisitanteSignalRService>();
 
             await builder.Build().RunAsync();
         }

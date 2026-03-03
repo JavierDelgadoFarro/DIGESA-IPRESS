@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @page "/login"
 @layout LoginLayout
 @attribute [AllowAnonymous]
@@ -6,7 +6,6 @@
 @inject NavigationManager NavManager
 @inject AuthenticationStateProvider AuthProvider
 @inject ILocalStorageService _localStorage
-@inject SignalRService SignalRService
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Authorization
 @using Blazored.LocalStorage
@@ -25,7 +24,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                     </svg>
                 </div>
-                <h1 class="text-2xl font-bold text-white mb-2">Sistema de Gestión de Visitas</h1>
+                <h1 class="text-2xl font-bold text-white mb-2">DIGESA-IPRESS</h1>
             </div>
 
             <!-- Formulario -->
@@ -190,38 +189,10 @@
             {
                 ((CustomAuthStateProvider)AuthProvider).NotifyUserAuthentication(result.Token);
                 
-                // Dar tiempo al AuthenticationStateProvider para actualizar el estado
                 await Task.Delay(100);
                 
-                // Iniciar conexión SignalR
-                await SignalRService.IniciarConexionAsync();
-                
-                // Obtener accesos del usuario y redirigir al dashboard correspondiente
-                var accesos = await AuthService.GetAccesosAsync();
-                string rutaDestino = "/principal"; // Ruta por defecto
-
-                if (accesos != null && accesos.Modulos != null)
-                {
-                    // Obtener todas las rutas a las que el usuario tiene acceso
-                    var rutasDisponibles = accesos.Modulos
-                        .SelectMany(m => m.Menus)
-                        .SelectMany(m => m.SubMenus)
-                        .Select(s => s.Ruta?.ToLower())
-                        .Where(r => !string.IsNullOrEmpty(r))
-                        .ToList();
-
-                    // Prioridad: dashboard/admin > dashboard/user > principal
-                    if (rutasDisponibles.Contains("/dashboard/admin"))
-                    {
-                        rutaDestino = "/dashboard/admin";
-                    }
-                    else if (rutasDisponibles.Contains("/dashboard/user"))
-                    {
-                        rutaDestino = "/dashboard/user";
-                    }
-                }
-
-                NavManager.NavigateTo(rutaDestino);
+                // Redirigir a principal (los módulos se cargarán dinámicamente en el menú)
+                NavManager.NavigateTo("/principal");
             }
             else
             {

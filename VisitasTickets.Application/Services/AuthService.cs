@@ -1,16 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using VisitasTickets.Application.Interfaces;
 using VisitasTickets.Infrastructure.Persistence;
-
 
 namespace VisitasTickets.Application.Services
 {
-    public class AuthService
+    public class AuthService : IAuthService
     {
 
         private readonly AppDbContext _context; 

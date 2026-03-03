@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using VisitasTickets.Application.Interfaces;
 using VisitasTickets.Application.Services;
 using VisitasTickets.Infrastructure.Persistence;
-using VisitasTickets.API.Hubs;
 
 namespace VisitasTickets
 {
@@ -15,17 +15,16 @@ namespace VisitasTickets
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Registrar DbContext con la cadena de conexi�n
+            // Registrar DbContext con la cadena de conexión
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
             builder.Services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "VisitasTickets API", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "DIGESA-IPRESS API", Version = "v1" });
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
@@ -47,17 +46,12 @@ namespace VisitasTickets
                                 Id = "Bearer"
                             }
                         },
-                        new string[] {}
+                        Array.Empty<string>()
                     }
                 });
             });
 
-
-            builder.Services.AddScoped<AuthService>();
-            builder.Services.AddScoped<SignalRNotificationService>();
-
-            // Configurar SignalR
-            builder.Services.AddSignalR();
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -74,22 +68,6 @@ namespace VisitasTickets
                             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)
                         )
                     };
-
-                    // Configurar autenticación para SignalR
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnMessageReceived = context =>
-                        {
-                            var accessToken = context.Request.Query["access_token"];
-                            var path = context.HttpContext.Request.Path;
-                            
-                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-                            {
-                                context.Token = accessToken;
-                            }
-                            return Task.CompletedTask;
-                        }
-                    };
                 });
 
             builder.Services.AddAuthorization();
@@ -97,15 +75,14 @@ namespace VisitasTickets
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowClient",
-                    policy => policy.SetIsOriginAllowed(origin => true) // Permite cualquier origen en desarrollo
-                                    .AllowAnyHeader()
-                                    .AllowAnyMethod()
-                                    .AllowCredentials()); // Requerido para SignalR
+                    policy => policy.SetIsOriginAllowed(_ => true)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials());
             });
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -117,11 +94,7 @@ namespace VisitasTickets
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
-            
-            // Mapear los Hubs de SignalR
-            app.MapHub<AtencionHub>("/hubs/atenciones");
-            app.MapHub<VisitanteHub>("/hubs/visitantes"); // Hub público para visitantes
-            
+
             app.Run();
         }
     }

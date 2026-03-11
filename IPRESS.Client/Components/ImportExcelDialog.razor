@@ -1,0 +1,226 @@
+@using Radzen
+@using Radzen.Blazor
+@inject NotificationService Notify
+@inject DialogService DialogService
+
+<RadzenStack Gap="0.75rem">
+    <RadzenText TextStyle="TextStyle.Caption" Style="color:var(--rz-base-500)">Seleccione archivo Excel (.xlsx) con el formato descargado.</RadzenText>
+    <InputFile Accept=".xlsx,.xls" OnChange="@OnFileSelected" class="rz-file-upload" />
+    @if (fileBytes != null && fileName != null && previewData == null && !isLoading)
+    {
+        <RadzenStack Gap="0.5rem">
+            <RadzenText TextStyle="TextStyle.Body2">Archivo cargado: <strong>@fileName</strong>. Haga clic en <strong>Validar</strong> para validar los datos.</RadzenText>
+            <RadzenButton Text="Validar" ButtonStyle="ButtonStyle.Primary" Icon="check_circle" Click="@OnValidar" Disabled="@(PreviewFn == null && PreviewWithErrorFn == null)" />
+        </RadzenStack>
+    }
+    @if (isLoading)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center">
+            <RadzenProgressBarCircular ShowValue="false" Size="ProgressBarCircularSize.Small" Mode="ProgressBarMode.Indeterminate" />
+            <span>@(previewData == null ? "Validando..." : "Importando...")</span>
+        </RadzenStack>
+    }
+    @if (previewData != null && !isImporting)
+    {
+        <RadzenText TextStyle="TextStyle.Subtitle2">Registros del Excel (@(previewData.Filas?.Count ?? 0) filas)</RadzenText>
+        @if (previewData.TieneErrores)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Light" AllowClose="false">
+                <strong>Hay errores de dato. Corrija el Excel y vuelva a validar. El botón Importar permanece deshabilitado.</strong>
+            </RadzenAlert>
+        }
+        @if (previewData.Errores?.Count > 0)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Light" AllowClose="false">
+                @foreach (var err in previewData.Errores.Take(5))
+                { <span>@err</span><br /> }
+                @if (previewData.Errores.Count > 5)
+                { <span>... y @(previewData.Errores.Count - 5) más.</span> }
+            </RadzenAlert>
+        }
+        @if (previewData.Duplicados > 0)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Light" AllowClose="false">
+                <strong>@previewData.Duplicados registro(s) duplicado(s).</strong> No se puede importar; corrija el archivo o cierre el diálogo.
+            </RadzenAlert>
+        }
+        <div style="max-height:380px; overflow:auto; border:1px solid var(--rz-base-300); border-radius:6px; padding:4px;">
+            <IpressDataTable TItem="ImportPreviewRowDto" Data="@(previewData.Filas ?? new List<ImportPreviewRowDto>())" AllowPaging="false" AllowGrouping="false" Style="font-size:13px">
+                <Columns>
+                    <RadzenDataGridColumn TItem="ImportPreviewRowDto" Property="Codigo" Title="Código" Width="90px" MinWidth="80px" />
+                    <RadzenDataGridColumn TItem="ImportPreviewRowDto" Property="Nombre" Title="Nombre" Width="200px" MinWidth="140px" />
+                    @if (previewData.Columnas?.Contains("departamento") == true)
+                    {
+                        <RadzenDataGridColumn TItem="ImportPreviewRowDto" Property="Departamento" Title="Departamento" Width="120px" MinWidth="100px" />
+                    }
+                    @if (previewData.Columnas?.Contains("provincia") == true)
+                    {
+                        <RadzenDataGridColumn TItem="ImportPreviewRowDto" Property="Provincia" Title="Provincia" Width="120px" MinWidth="100px" />
+                    }
+                    @if (previewData.Columnas?.Contains("distrito") == true)
+                    {
+                        <RadzenDataGridColumn TItem="ImportPreviewRowDto" Property="Distrito" Title="Distrito" Width="120px" MinWidth="100px" />
+                    }
+                    @if (previewData.Columnas == null || previewData.Columnas.Count == 0 || previewData.Columnas.Contains("ubigeo"))
+                    {
+                        <RadzenDataGridColumn TItem="ImportPreviewRowDto" Property="Ubigeo" Title="Ubigeo" Width="90px" MinWidth="80px" />
+                    }
+                    <RadzenDataGridColumn TItem="ImportPreviewRowDto" Title="Estado" Width="260px" MinWidth="220px">
+                        <Template Context="row">
+                            @if (row.Estado == "ok")
+                            {
+                                <span style="color:var(--rz-success);font-size:11px;">✓ OK</span>
+                            }
+                            else if (row.Estado == "duplicado")
+                            {
+                                <span style="color:var(--rz-warning);font-size:11px;" title="@(row.Mensaje ?? "Duplicado")">⚠ Duplicado</span>
+                                <br /><span style="color:var(--rz-base-600);font-size:10px;">@(row.Mensaje ?? "El código ya existe")</span>
+                            }
+                            else
+                            {
+                                <span style="color:var(--rz-danger);font-size:11px;">✗ @(row.Mensaje ?? "Error")</span>
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </IpressDataTable>
+        </div>
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" JustifyContent="JustifyContent.End">
+            <RadzenButton Text="Cerrar" ButtonStyle="ButtonStyle.Light" Click="@CerrarModal" />
+            <RadzenButton Text="Importar" ButtonStyle="ButtonStyle.Primary" Icon="upload" Click="@ConfirmarImportar" Disabled="@(ImportFn == null || fileBytes == null || fileName == null || previewData.TieneErrores || (previewData.Errores?.Count ?? 0) > 0 || previewData.Duplicados > 0)" />
+        </RadzenStack>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter] public Func<Stream, string, Task<ImportPreviewDto?>>? PreviewFn { get; set; }
+    /// <summary>Si se define, se usa en lugar de PreviewFn y permite mostrar el mensaje de error de la API.</summary>
+    [Parameter] public Func<Stream, string, Task<(ImportPreviewDto?, string?)>>? PreviewWithErrorFn { get; set; }
+    [Parameter] public Func<Stream, string, Task<ImportResultDto?>>? ImportFn { get; set; }
+    [Parameter] public EventCallback OnImported { get; set; }
+
+    private bool isLoading;
+    private bool isImporting;
+    private ImportPreviewDto? previewData;
+    private byte[]? fileBytes;
+    private string? fileName;
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        if (e.FileCount == 0) return;
+        var file = e.File;
+        previewData = null;
+        fileBytes = null;
+        fileName = null;
+        if (PreviewFn == null && PreviewWithErrorFn == null && ImportFn != null)
+        {
+            await ImportarDirecto(file);
+            return;
+        }
+        if (PreviewFn == null && PreviewWithErrorFn == null) return;
+        try
+        {
+            await using var stream = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(stream);
+            fileBytes = stream.ToArray();
+            fileName = file.Name;
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al leer el archivo. Intente de nuevo.");
+        }
+    }
+
+    private async Task OnValidar()
+    {
+        if (fileBytes == null || fileName == null || (PreviewFn == null && PreviewWithErrorFn == null)) return;
+        isLoading = true;
+        previewData = null;
+        try
+        {
+            await using var stream = new MemoryStream(fileBytes);
+            if (PreviewWithErrorFn != null)
+            {
+                var (data, errorMsg) = await PreviewWithErrorFn(stream, fileName);
+                previewData = data;
+                if (previewData == null)
+                    Notify.ShowError(errorMsg ?? "No se pudo validar. Use un Excel (.xlsx) con hoja 'Diresas' y columnas Codigo, Nombre, Ubigeo.");
+            }
+            else
+            {
+                previewData = await PreviewFn!(stream, fileName);
+                if (previewData == null)
+                    Notify.ShowError("No se pudo validar. Revise que el archivo sea un Excel (.xlsx) válido con hoja 'Diresas' y columnas Codigo, Nombre, Ubigeo.");
+            }
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al validar. Intente de nuevo.");
+        }
+        finally { isLoading = false; }
+    }
+
+    private void CerrarModal()
+    {
+        try { DialogService.Close(false); } catch { }
+    }
+
+    private async Task ConfirmarImportar()
+    {
+        if (ImportFn == null || fileBytes == null || fileName == null) return;
+        isImporting = true;
+        try
+        {
+            await using var stream = new MemoryStream(fileBytes);
+            var result = await ImportFn(stream, fileName);
+            if (result != null)
+            {
+                var msg = $"Importado: {result.Insertados} | Duplicados omitidos: {result.Duplicados}";
+                if (result.Errores?.Count > 0)
+                    msg += $" | Errores de dato: {result.Errores.Count}";
+                Notify.ShowSuccess(msg);
+                try { await OnImported.InvokeAsync(); } catch { }
+                try { DialogService.Close(true); } catch { }
+            }
+            else
+                Notify.ShowError("Error en la importación. Compruebe que la API esté en ejecución e intente de nuevo.");
+        }
+        catch (Exception ex)
+        {
+            var m = ex.Message ?? "";
+            if (m.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) || m.Contains("fetch", StringComparison.OrdinalIgnoreCase))
+                Notify.ShowError("No se pudo conectar con el servidor. Inicie el proyecto IPRESS.API y vuelva a intentar.");
+            else
+                Notify.ShowError("Error al importar: " + (m.Length > 80 ? m.Substring(0, 80) + "…" : m));
+        }
+        finally { isImporting = false; }
+    }
+
+    private async Task ImportarDirecto(IBrowserFile file)
+    {
+        if (ImportFn == null) return;
+        isImporting = true;
+        try
+        {
+            await using var stream = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(stream);
+            stream.Position = 0;
+            var result = await ImportFn(stream, file.Name);
+            if (result != null)
+            {
+                var msg = $"Importado: {result.Insertados} | Duplicados: {result.Duplicados}";
+                if (result.Errores?.Count > 0) msg += $" | Errores: {result.Errores.Count}";
+                Notify.ShowSuccess(msg);
+                try { await OnImported.InvokeAsync(); } catch { }
+                try { DialogService.Close(true); } catch { }
+            }
+            else
+                Notify.ShowError("Error en la importación. Intente de nuevo.");
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al procesar el archivo. La sesión se mantiene; intente de nuevo.");
+        }
+        finally { isImporting = false; }
+    }
+}

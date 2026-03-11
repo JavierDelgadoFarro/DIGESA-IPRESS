@@ -1,0 +1,24 @@
+@using Radzen
+@using Radzen.Blazor
+@inject DialogService DialogService
+
+<RadzenStack Gap="0.5rem">
+    @if (Establecimiento != null)
+    {
+        <RadzenStack Gap="0.25rem">
+            <p><strong>Código:</strong> @Establecimiento.Codigo</p>
+            <p><strong>Nombre:</strong> @Establecimiento.Nombre</p>
+            <p><strong>Diresa:</strong> @(Establecimiento.Diresa ?? "-")</p>
+            <p><strong>Red:</strong> @(Establecimiento.Red ?? "-")</p>
+            <p><strong>MicroRed:</strong> @(Establecimiento.MicroRed ?? "-")</p>
+            <p><strong>Ubigeo:</strong> @(Establecimiento.Ubigeo ?? "-")</p>
+        </RadzenStack>
+    }
+    <RadzenButton Text="Cerrar" ButtonStyle="ButtonStyle.Primary" Click="@Cerrar" Style="margin-top:0.5rem" />
+</RadzenStack>
+
+@code {
+    [Parameter] public EstablecimientoListDto? Establecimiento { get; set; }
+
+    private void Cerrar() => DialogService.Close(true);
+}

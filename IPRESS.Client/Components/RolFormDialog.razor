@@ -1,0 +1,67 @@
+@using Radzen
+@using Radzen.Blazor
+@inject DialogService DialogService
+@inject NotificationService Notify
+
+<RadzenStack Gap="0.75rem">
+    <RadzenTemplateForm TItem="RolModel" Data="@model" Submit="@Guardar" Style="display:contents">
+        <RadzenFormField Text="Código" Variant="Variant.Outlined">
+            <RadzenTextBox @bind-Value="model.Codigo" Style="width:100%" MaxLength="50" Disabled="@EsEdicion" />
+        </RadzenFormField>
+        <RadzenFormField Text="Nombre" Variant="Variant.Outlined">
+            <RadzenTextBox @bind-Value="model.Nombre" Style="width:100%" MaxLength="100" />
+        </RadzenFormField>
+    </RadzenTemplateForm>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@Cancelar" />
+        <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@OnGuardar" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public RolDto? Rol { get; set; }
+    [Parameter] public GestionUsuariosService GestionUsuarios { get; set; } = null!;
+
+    private RolModel model = new();
+    private bool EsEdicion => Rol != null;
+
+    protected override void OnParametersSet()
+    {
+        model = Rol != null
+            ? new RolModel { IdRol = Rol.IdRol, Codigo = Rol.Codigo ?? "", Nombre = Rol.Nombre ?? "" }
+            : new RolModel { Codigo = "", Nombre = "" };
+    }
+
+    private void Guardar(RolModel _) { }
+
+    private async Task OnGuardar()
+    {
+        if (string.IsNullOrWhiteSpace(model.Nombre)) { Notify.ShowError("El nombre es requerido."); return; }
+        if (!EsEdicion && string.IsNullOrWhiteSpace(model.Codigo)) { Notify.ShowError("El código es requerido."); return; }
+        try
+        {
+            if (EsEdicion)
+            {
+                var ok = await GestionUsuarios.PutRolAsync(model.IdRol, model.Codigo?.Trim() ?? "", model.Nombre.Trim());
+                if (ok) { Notify.ShowSuccess("Rol actualizado."); DialogService.Close(true); }
+                else Notify.ShowError("Error al actualizar.");
+            }
+            else
+            {
+                var created = await GestionUsuarios.PostRolAsync(model.Codigo!.Trim(), model.Nombre.Trim());
+                if (created != null) { Notify.ShowSuccess("Rol creado."); DialogService.Close(true); }
+                else Notify.ShowError("Error al crear (¿código duplicado?).");
+            }
+        }
+        catch (Exception ex) { Notify.ShowError(ex.Message ?? "Error al guardar."); }
+    }
+
+    private void Cancelar() => DialogService.Close(null);
+
+    private class RolModel
+    {
+        public int IdRol { get; set; }
+        public string Codigo { get; set; } = "";
+        public string Nombre { get; set; } = "";
+    }
+}

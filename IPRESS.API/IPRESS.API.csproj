@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Core" Version="1.6.0" />
+    <PackageReference Include="EPPlus" Version="7.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.24" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.24">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.24" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IPRESS.Application\IPRESS.Application.csproj" />
+    <ProjectReference Include="..\IPRESS.Infrastructure\IPRESS.Infrastructure.csproj" />
+    <ProjectReference Include="..\IPRESS.Client\IPRESS.Client.csproj" />
+    <ProjectReference Include="..\IPRESS.ExcelHelper\IPRESS.ExcelHelper.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <PrivateAssets>all</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Target Name="CopyExcelHelperToOutput" AfterTargets="Build">
+    <PropertyGroup>
+      <_ExcelHelperSource>$(MSBuildProjectDirectory)\..\IPRESS.ExcelHelper\bin\$(Configuration)\net8.0\</_ExcelHelperSource>
+      <_ExcelHelperDest>$(OutputPath)ExcelHelper\</_ExcelHelperDest>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ExcelHelperFiles Include="$(_ExcelHelperSource)**\*" />
+    </ItemGroup>
+    <MakeDir Directories="$(_ExcelHelperDest)" />
+    <Copy SourceFiles="@(_ExcelHelperFiles)" DestinationFolder="$(_ExcelHelperDest)%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

@@ -1,0 +1,233 @@
+@using Radzen
+@using Radzen.Blazor
+@inject DialogService DialogService
+@inject NotificationService Notify
+@inject MaestrosService Maestros
+
+<RadzenStack Gap="0.75rem">
+    <RadzenFieldSet Text="Datos del usuario" Icon="person">
+        <RadzenTemplateForm TItem="UsuarioEditDto" Data="@model" Submit="@Guardar" Style="display:contents">
+            @if (EsEdicion)
+            {
+                <RadzenText TextStyle="TextStyle.Caption">Usuario: <strong>@model?.NombreUsuario</strong></RadzenText>
+            }
+            else
+            {
+                <RadzenFormField Text="Usuario (login)" Variant="Variant.Outlined">
+                    <RadzenTextBox @bind-Value="model!.NombreUsuario" Style="width:100%" MaxLength="50" />
+                </RadzenFormField>
+                <RadzenFormField Text="Contraseña (opcional; si se deja vacío se usará el nombre de usuario)" Variant="Variant.Outlined">
+                    <RadzenPassword @bind-Value="contrasenaNueva" Style="width:100%" />
+                </RadzenFormField>
+            }
+            <RadzenFormField Text="Nombre completo" Variant="Variant.Outlined">
+                <RadzenTextBox @bind-Value="model!.NombreCompleto" Style="width:100%" MaxLength="200" />
+            </RadzenFormField>
+            <RadzenFormField Text="Diresa (opcional)" Variant="Variant.Outlined">
+                <RadzenDropDown @bind-Value="model!.IdDiresa" Data="@diresasConOpcion" TextProperty="Nombre" ValueProperty="Id" Style="width:100%" Change="@OnDiresaChange" />
+            </RadzenFormField>
+            <RadzenFormField Text="Red (opcional)" Variant="Variant.Outlined">
+                <RadzenDropDown @bind-Value="model!.IdRed" Data="@redesConOpcion" TextProperty="Nombre" ValueProperty="Id" Style="width:100%" Change="@OnRedChange" />
+            </RadzenFormField>
+            <RadzenFormField Text="MicroRed (opcional)" Variant="Variant.Outlined">
+                <RadzenDropDown @bind-Value="model!.IdMicroRed" Data="@microRedesConOpcion" TextProperty="Nombre" ValueProperty="Id" Style="width:100%" Change="@OnMicroRedChange" />
+            </RadzenFormField>
+            <RadzenFormField Text="Establecimiento (opcional)" Variant="Variant.Outlined">
+                <RadzenDropDown @bind-Value="model!.IdEstablecimiento" Data="@establecimientosConOpcion" TextProperty="Nombre" ValueProperty="Id" Style="width:100%" />
+            </RadzenFormField>
+            <RadzenFormField Text="Email" Variant="Variant.Outlined">
+                <RadzenTextBox @bind-Value="model!.Email" Style="width:100%" MaxLength="200" />
+            </RadzenFormField>
+            <RadzenFormField Variant="Variant.Outlined">
+                <RadzenCheckBox @bind-Value="model!.Activo" Name="Activo" Text="Activo" />
+            </RadzenFormField>
+            @if (EsEdicion && model != null)
+            {
+                <RadzenFormField Text="Nueva contraseña (dejar vacío para no cambiar)" Variant="Variant.Outlined">
+                    <RadzenPassword @bind-Value="contrasenaNueva" Style="width:100%" />
+                </RadzenFormField>
+            }
+        </RadzenTemplateForm>
+    </RadzenFieldSet>
+    <RadzenFieldSet Text="Roles asignados (puede elegir uno o más)" Icon="group_work">
+        @foreach (var r in Roles)
+        {
+            <RadzenCheckBox Name="@("rol_" + r.IdRol)" Checked="@(model?.RolIds?.Contains(r.IdRol) ?? false)" Change="@((bool v) => ToggleRol(r.IdRol, v))" Text="@r.Nombre" Style="display:block;margin:4px 0" />
+        }
+    </RadzenFieldSet>
+    @if (Estructura != null && (permisosObtenidos?.SubMenuIds?.Count > 0 || permisosObtenidos?.BotonIds?.Count > 0))
+    {
+        <RadzenFieldSet Text="Permisos obtenidos (por los roles asignados, sin duplicados)" Icon="security">
+            <div style="max-height:200px;overflow:auto;border:1px solid var(--rz-base-300);border-radius:4px;padding:8px;font-size:12px;">
+                @if (nombresSubMenus.Any())
+                {
+                    <div style="margin-bottom:6px;"><strong>Menús:</strong> @string.Join(", ", nombresSubMenus)</div>
+                }
+                @if (nombresBotones.Any())
+                {
+                    <div><strong>Acciones por módulo:</strong> @string.Join(", ", nombresBotones)</div>
+                }
+            </div>
+        </RadzenFieldSet>
+    }
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@Cancelar" />
+        <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Primary" Click="@OnGuardar" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public UsuarioEditDto? Usuario { get; set; }
+    [Parameter] public List<RolDto> Roles { get; set; } = new();
+    [Parameter] public List<DiresaDto> Diresas { get; set; } = new();
+    [Parameter] public EstructuraPermisosDto? Estructura { get; set; }
+    [Parameter] public GestionUsuariosService GestionUsuarios { get; set; } = null!;
+
+    private UsuarioEditDto? model;
+    private string? contrasenaNueva;
+    private PermisosRolDto? permisosObtenidos;
+    private bool EsEdicion => Usuario != null;
+    private IEnumerable<string> nombresSubMenus => ObtenerNombresSubMenus();
+    private IEnumerable<string> nombresBotones => ObtenerNombresBotones();
+
+    private List<RedDto> Redes = new();
+    private List<MicroRedDto> MicroRedes = new();
+    private List<EstablecimientoListDto> Establecimientos = new();
+    private IEnumerable<SelectOptionIntNullable> diresasConOpcion => new[] { new SelectOptionIntNullable { Id = null, Nombre = "--seleccionar--" } }.Concat(Diresas.Select(d => new SelectOptionIntNullable { Id = d.IdDiresa, Nombre = d.Nombre }));
+    private IEnumerable<SelectOptionIntNullable> redesConOpcion => new[] { new SelectOptionIntNullable { Id = null, Nombre = "--seleccionar--" } }.Concat(Redes.Select(r => new SelectOptionIntNullable { Id = r.IdRed, Nombre = r.Nombre }));
+    private IEnumerable<SelectOptionIntNullable> microRedesConOpcion => new[] { new SelectOptionIntNullable { Id = null, Nombre = "--seleccionar--" } }.Concat(MicroRedes.Select(m => new SelectOptionIntNullable { Id = m.IdMicroRed, Nombre = m.Nombre }));
+    private IEnumerable<SelectOptionIntNullable> establecimientosConOpcion => new[] { new SelectOptionIntNullable { Id = null, Nombre = "--seleccionar--" } }.Concat(Establecimientos.Select(e => new SelectOptionIntNullable { Id = e.IdEstablecimiento, Nombre = e.Nombre ?? "" }));
+
+    protected override void OnParametersSet()
+    {
+        model = Usuario != null
+            ? new UsuarioEditDto { IdUsuario = Usuario.IdUsuario, NombreUsuario = Usuario.NombreUsuario, NombreCompleto = Usuario.NombreCompleto, Email = Usuario.Email, Activo = Usuario.Activo, IdDiresa = Usuario.IdDiresa, IdRed = Usuario.IdRed, IdMicroRed = Usuario.IdMicroRed, IdEstablecimiento = Usuario.IdEstablecimiento, RolIds = Usuario.RolIds.ToList() }
+            : new UsuarioEditDto { NombreUsuario = "", NombreCompleto = "", Activo = true, RolIds = new List<int>() };
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CargarRedesMicroRedesEstablecimientos();
+        await RefrescarPermisosObtenidos();
+    }
+
+    private async Task OnDiresaChange()
+    {
+        model!.IdRed = null;
+        model!.IdMicroRed = null;
+        model!.IdEstablecimiento = null;
+        await CargarRedesMicroRedesEstablecimientos();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnRedChange()
+    {
+        model!.IdMicroRed = null;
+        model!.IdEstablecimiento = null;
+        await CargarRedesMicroRedesEstablecimientos();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnMicroRedChange()
+    {
+        model!.IdEstablecimiento = null;
+        await CargarRedesMicroRedesEstablecimientos();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CargarRedesMicroRedesEstablecimientos()
+    {
+        if (model == null) return;
+        Redes = model.IdDiresa.HasValue ? (await Maestros.GetRedesAsync(model.IdDiresa) ?? new()) : new();
+        MicroRedes = model.IdRed.HasValue ? (await Maestros.GetMicroRedesAsync(model.IdRed) ?? new()) : new();
+        Establecimientos = model.IdMicroRed.HasValue ? (await Maestros.GetEstablecimientosAsync(model.IdMicroRed) ?? new()) : new();
+    }
+
+    private async Task RefrescarPermisosObtenidos()
+    {
+        if (model?.RolIds == null || model.RolIds.Count == 0)
+        {
+            permisosObtenidos = null;
+            return;
+        }
+        permisosObtenidos = await GestionUsuarios.GetPermisosPorRolesAsync(model.RolIds);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<string> ObtenerNombresSubMenus()
+    {
+        if (Estructura == null || permisosObtenidos?.SubMenuIds == null) return Array.Empty<string>();
+        var set = permisosObtenidos.SubMenuIds.ToHashSet();
+        return Estructura.Estructura
+            .SelectMany(m => m.Menus.SelectMany(me => me.SubMenus.Where(s => set.Contains(s.IdSubMenu)).Select(s => !string.IsNullOrWhiteSpace(s.Nombre) ? s.Nombre : (!string.IsNullOrWhiteSpace(s.Ruta) ? s.Ruta : "Submenú " + s.IdSubMenu))))
+            .Distinct()
+            .OrderBy(x => x);
+    }
+
+    private IEnumerable<string> ObtenerNombresBotones()
+    {
+        if (Estructura == null || permisosObtenidos?.BotonIds == null) return Array.Empty<string>();
+        var set = permisosObtenidos.BotonIds.ToHashSet();
+        return Estructura.BotonesPorModulo.Where(b => set.Contains(b.IdBoton)).Select(b => !string.IsNullOrWhiteSpace(b.Nombre) ? b.Nombre : (!string.IsNullOrWhiteSpace(b.Codigo) ? b.Codigo : "Botón " + b.IdBoton)).Distinct().OrderBy(x => x);
+    }
+
+    private void ToggleRol(int idRol, bool checked_)
+    {
+        if (model == null) return;
+        model.RolIds ??= new List<int>();
+        if (checked_ && !model.RolIds.Contains(idRol)) model.RolIds.Add(idRol);
+        if (!checked_) model.RolIds.Remove(idRol);
+        _ = RefrescarPermisosObtenidos();
+    }
+
+    private void Guardar(UsuarioEditDto _) { }
+
+    private async Task OnGuardar()
+    {
+        if (model == null) return;
+        if (string.IsNullOrWhiteSpace(model.NombreCompleto)) { Notify.ShowError("Nombre completo es requerido."); return; }
+        try
+        {
+            if (EsEdicion)
+            {
+                var ok = await GestionUsuarios.PutUsuarioAsync(model.IdUsuario, new UsuarioUpdateDto
+                {
+                    NombreCompleto = model.NombreCompleto,
+                    Email = model.Email,
+                    Activo = model.Activo,
+                    IdDiresa = model.IdDiresa,
+                    IdRed = model.IdRed,
+                    IdMicroRed = model.IdMicroRed,
+                    IdEstablecimiento = model.IdEstablecimiento,
+                    Contrasena = string.IsNullOrWhiteSpace(contrasenaNueva) ? null : contrasenaNueva,
+                    RolIds = model.RolIds
+                });
+                if (ok) { Notify.ShowSuccess("Usuario actualizado."); DialogService.Close(true); }
+                else Notify.ShowError("Error al actualizar.");
+            }
+            else
+            {
+                var ok = await GestionUsuarios.PostUsuarioAsync(new UsuarioCreateDto
+                {
+                    NombreUsuario = model.NombreUsuario.Trim(),
+                    NombreCompleto = model.NombreCompleto.Trim(),
+                    Email = model.Email,
+                    Activo = model.Activo,
+                    IdDiresa = model.IdDiresa,
+                    IdRed = model.IdRed,
+                    IdMicroRed = model.IdMicroRed,
+                    IdEstablecimiento = model.IdEstablecimiento,
+                    Contrasena = string.IsNullOrWhiteSpace(contrasenaNueva) ? null : contrasenaNueva,
+                    RolIds = model.RolIds
+                });
+                if (ok) { Notify.ShowSuccess("Usuario creado."); DialogService.Close(true); }
+                else Notify.ShowError("Error al crear (¿nombre de usuario duplicado?).");
+            }
+        }
+        catch (Exception ex) { Notify.ShowError(ex.Message ?? "Error al guardar."); }
+    }
+
+    private void Cancelar() => DialogService.Close(false);
+
+    private sealed class SelectOptionIntNullable { public int? Id { get; set; } public string Nombre { get; set; } = ""; }
+}

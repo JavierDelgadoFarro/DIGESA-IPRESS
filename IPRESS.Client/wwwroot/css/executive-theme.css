@@ -1,0 +1,86 @@
+/* Tema Ejecutivo - IPRESS: minimalista, recto, profesional */
+:root {
+    --exec-primary: #1e3a5f;
+    --exec-primary-hover: #152a45;
+    --exec-bg: #f5f6f8;
+    --exec-sidebar-bg: #fff;
+    --exec-header-bg: #fff;
+    --exec-border: #e2e4e8;
+    --exec-text: #1f2937;
+    --exec-text-muted: #6b7280;
+    --exec-accent: #2563eb;
+}
+
+.odoo-layout { background: var(--exec-bg) !important; }
+
+.odoo-header {
+    background: var(--exec-header-bg) !important;
+    border-bottom: 1px solid var(--exec-border);
+    box-shadow: none;
+}
+
+.odoo-header .odoo-user-badge {
+    background: var(--exec-bg);
+    border: 1px solid var(--exec-border);
+}
+
+.odoo-sidebar {
+    background: var(--exec-sidebar-bg) !important;
+    border-right: 1px solid var(--exec-border);
+}
+
+.odoo-nav-item {
+    border-radius: 0 !important;
+    border-left: 2px solid transparent;
+}
+
+.odoo-nav-item:hover {
+    background: rgba(30, 58, 95, 0.06);
+    color: var(--exec-primary);
+}
+
+.odoo-nav-item.active {
+    background: rgba(30, 58, 95, 0.08);
+    color: var(--exec-primary);
+    border-left-color: var(--exec-primary);
+}
+
+.odoo-table {
+    border-radius: 0;
+    border: 1px solid var(--exec-border);
+}
+
+.odoo-table thead {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.odoo-btn-primary {
+    border-radius: 2px;
+    background: var(--exec-primary) !important;
+}
+
+.odoo-btn-primary:hover {
+    background: var(--exec-primary-hover) !important;
+}
+
+.odoo-btn-secondary {
+    border-radius: 2px;
+}
+
+.odoo-logout-btn {
+    background: var(--exec-primary) !important;
+    border-radius: 0;
+}
+
+.odoo-logout-btn:hover {
+    background: var(--exec-primary-hover) !important;
+}
+
+.odoo-page-card {
+    border-radius: 0;
+}
+
+.odoo-breadcrumb a { color: var(--exec-primary); }

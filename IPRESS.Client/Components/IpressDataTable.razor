@@ -1,0 +1,169 @@
+@typeparam TItem
+@using Radzen
+@using Radzen.Blazor
+@*
+  IpressDataTable: componente unificado de tabla con filtros, orden, agrupación,
+  columnas fijas y detalle expandible (tabla dentro de tabla).
+  Ver DOCS_IPRESS_DATATABLE.md para uso y funcionalidades.
+*@
+<RadzenDataGrid @ref="InnerGrid"
+                Data="@Data"
+                TItem="TItem"
+                Class="@($"ipress-datatable {(string.IsNullOrEmpty(Class) ? "" : Class)}")"
+                AllowFiltering="@AllowFiltering"
+                AllowSorting="@AllowSorting"
+                AllowPaging="@AllowPaging"
+                AllowGrouping="@AllowGrouping"
+                AllowColumnResize="@AllowColumnResize"
+                AllowColumnReorder="@AllowColumnReorder"
+                FilterMode="@FilterMode"
+                LogicalFilterOperator="@LogicalFilterOperator"
+                FilterCaseSensitivity="@FilterCaseSensitivity"
+                GroupPanelText="@GroupPanelText"
+                ExpandMode="@ExpandMode"
+                ShowPagingSummary="@ShowPagingSummary"
+                PagingSummaryFormat="@PagingSummaryFormat"
+                PageSize="@PageSize"
+                PageSizeOptions="@PageSizeOptions"
+                PagerHorizontalAlign="@PagerHorizontalAlign"
+                Compact="@Compact"
+                Style="@Style"
+                EmptyText="@EmptyText"
+                FilterText="@FilterText"
+                ApplyFilterText="@ApplyFilterText"
+                ClearFilterText="@ClearFilterText"
+                EqualsText="@EqualsText"
+                NotEqualsText="@NotEqualsText"
+                ContainsText="@ContainsText"
+                DoesNotContainText="@DoesNotContainText"
+                StartsWithText="@StartsWithText"
+                EndsWithText="@EndsWithText"
+                AndOperatorText="@AndOperatorText"
+                OrOperatorText="@OrOperatorText"
+                GreaterThanText="@GreaterThanText"
+                GreaterThanOrEqualsText="@GreaterThanOrEqualsText"
+                LessThanText="@LessThanText"
+                LessThanOrEqualsText="@LessThanOrEqualsText"
+                IsNullText="@IsNullText"
+                IsNotNullText="@IsNotNullText"
+                IsEmptyText="@IsEmptyText"
+                IsNotEmptyText="@IsNotEmptyText"
+                InText="@InText"
+                NotInText="@NotInText"
+                CustomText="@CustomText"
+                EnumFilterSelectText="@EnumFilterSelectText"
+                ColumnsText="@ColumnsText"
+                ColumnsShowingText="@ColumnsShowingText"
+                AllColumnsText="@AllColumnsText">
+    <Columns>
+        @Columns
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private RadzenDataGrid<TItem>? InnerGrid;
+
+    /// <summary>Referencia al grid interno (para Reload(), GetFilteredData(), etc.).</summary>
+    public RadzenDataGrid<TItem>? Grid => InnerGrid;
+
+    /// <summary>Datos a mostrar.</summary>
+    [Parameter] public IEnumerable<TItem>? Data { get; set; }
+
+    /// <summary>Columnas del grid (RadzenDataGridColumn). Se declaran dentro de &lt;Columns&gt; al usar el componente.</summary>
+    [Parameter] public RenderFragment? Columns { get; set; }
+
+    // --- Filtrado ---
+    /// <summary>Habilita filtros por columna.</summary>
+    [Parameter] public bool AllowFiltering { get; set; } = true;
+
+    /// <summary>Modo de filtro: Advanced = panel como en la referencia (Filtrar, condiciones, Y/O, Limpiar, Aplicar).</summary>
+    [Parameter] public FilterMode FilterMode { get; set; } = FilterMode.Advanced;
+
+    /// <summary>Operador lógico entre condiciones (Y u O).</summary>
+    [Parameter] public LogicalFilterOperator LogicalFilterOperator { get; set; } = LogicalFilterOperator.And;
+
+    /// <summary>Sensibilidad a mayúsculas en filtros (opcional; por defecto Radzen usa CaseInsensitive).</summary>
+    [Parameter] public FilterCaseSensitivity FilterCaseSensitivity { get; set; } = FilterCaseSensitivity.CaseInsensitive;
+
+    // --- Ordenación ---
+    /// <summary>Habilita ordenar por columna (clic en cabecera).</summary>
+    [Parameter] public bool AllowSorting { get; set; } = true;
+
+    // --- Agrupación ---
+    /// <summary>Habilita agrupar por columnas (arrastrar columna al panel o usar menú de columna). Aplica a todos los DataTable.</summary>
+    [Parameter] public bool AllowGrouping { get; set; } = true;
+
+    /// <summary>Texto del panel de agrupación (solo si AllowGrouping=true).</summary>
+    [Parameter] public string GroupPanelText { get; set; } = "Para agrupar: arrastre el nombre de una columna aquí o haga clic en el icono de la columna";
+
+    // --- Paginación ---
+    /// <summary>Habilita paginación.</summary>
+    [Parameter] public bool AllowPaging { get; set; } = true;
+
+    /// <summary>Tamaño de página.</summary>
+    [Parameter] public int PageSize { get; set; } = 20;
+
+    /// <summary>Opciones de tamaño de página (selector en el paginador: 20, 50, 100).</summary>
+    [Parameter] public int[] PageSizeOptions { get; set; } = new[] { 20, 50, 100 };
+
+    /// <summary>Mostrar resumen de paginación (ej. "1-25 de 100").</summary>
+    [Parameter] public bool ShowPagingSummary { get; set; } = true;
+
+    /// <summary>Formato del resumen. {0}=primer registro, {1}=último, {2}=total. Ej: "Mostrando 1 a 25 de 100 registros".</summary>
+    [Parameter] public string PagingSummaryFormat { get; set; } = "Mostrando {0} a {1} de {2} registros";
+
+    /// <summary>Alineación del paginador.</summary>
+    [Parameter] public HorizontalAlign PagerHorizontalAlign { get; set; } = HorizontalAlign.Center;
+
+    // --- Detalle (tabla dentro de tabla) ---
+    /// <summary>Modo de expansión: Single (una fila) o Multiple (varias).</summary>
+    [Parameter] public DataGridExpandMode ExpandMode { get; set; } = DataGridExpandMode.Single;
+
+    // --- Columnas ---
+    /// <summary>Permitir redimensionar columnas.</summary>
+    [Parameter] public bool AllowColumnResize { get; set; } = true;
+
+    /// <summary>Permitir reordenar columnas por arrastre.</summary>
+    [Parameter] public bool AllowColumnReorder { get; set; } = true;
+
+    // --- Apariencia ---
+    /// <summary>Estilo compacto. Por defecto false para que las cabeceras se vean correctamente.</summary>
+    [Parameter] public bool Compact { get; set; } = false;
+
+    /// <summary>Estilo CSS adicional.</summary>
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>Clase CSS adicional.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Texto cuando no hay datos.</summary>
+    [Parameter] public string EmptyText { get; set; } = "No hay registros.";
+
+    // --- Textos del filtro (español) ---
+    [Parameter] public string FilterText { get; set; } = "Filtrar";
+    [Parameter] public string ApplyFilterText { get; set; } = "Aplicar";
+    [Parameter] public string ClearFilterText { get; set; } = "Limpiar";
+    [Parameter] public string EqualsText { get; set; } = "Igual a";
+    [Parameter] public string NotEqualsText { get; set; } = "No es igual a";
+    [Parameter] public string ContainsText { get; set; } = "Contiene";
+    [Parameter] public string DoesNotContainText { get; set; } = "No contiene";
+    [Parameter] public string StartsWithText { get; set; } = "Empieza con";
+    [Parameter] public string EndsWithText { get; set; } = "Termina con";
+    [Parameter] public string AndOperatorText { get; set; } = "Y";
+    [Parameter] public string OrOperatorText { get; set; } = "O";
+    [Parameter] public string GreaterThanText { get; set; } = "Mayor que";
+    [Parameter] public string GreaterThanOrEqualsText { get; set; } = "Mayor o igual que";
+    [Parameter] public string LessThanText { get; set; } = "Menor que";
+    [Parameter] public string LessThanOrEqualsText { get; set; } = "Menor o igual que";
+    [Parameter] public string IsNullText { get; set; } = "Es nulo";
+    [Parameter] public string IsNotNullText { get; set; } = "No es nulo";
+    [Parameter] public string IsEmptyText { get; set; } = "Está vacío";
+    [Parameter] public string IsNotEmptyText { get; set; } = "No está vacío";
+    [Parameter] public string InText { get; set; } = "En";
+    [Parameter] public string NotInText { get; set; } = "No en";
+    [Parameter] public string CustomText { get; set; } = "Personalizado";
+    [Parameter] public string EnumFilterSelectText { get; set; } = "Seleccionar";
+    [Parameter] public string ColumnsText { get; set; } = "Columnas";
+    [Parameter] public string ColumnsShowingText { get; set; } = "Columnas visibles";
+    [Parameter] public string AllColumnsText { get; set; } = "Todas las columnas";
+}

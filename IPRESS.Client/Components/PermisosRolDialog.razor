@@ -1,0 +1,89 @@
+@using Radzen
+@using Radzen.Blazor
+@inject DialogService DialogService
+@inject NotificationService Notify
+
+<RadzenStack Gap="0.75rem">
+    <RadzenText TextStyle="TextStyle.Body2">Marque los submenús que este rol podrá ver en el menú y los botones (Crear, Editar, Eliminar, Importar, etc.) que tendrá en cada módulo.</RadzenText>
+    <div style="max-height:320px;overflow:auto;border:1px solid var(--rz-base-300);border-radius:4px;padding:8px;">
+        @if (Estructura != null && Estructura.Estructura != null)
+        {
+            @foreach (var mod in Estructura.Estructura)
+            {
+                var modNombre = !string.IsNullOrWhiteSpace(mod.Nombre) ? mod.Nombre : (mod.Codigo ?? "Módulo " + mod.IdModulo);
+                <RadzenFieldSet Text="@modNombre" Icon="folder" Style="margin-bottom:0.5rem">
+                    @if (mod.Menus != null)
+                    {
+                        @foreach (var menu in mod.Menus)
+                        {
+                            @if (menu.SubMenus != null)
+                            {
+                                @foreach (var sub in menu.SubMenus)
+                                {
+                                    var id = sub.IdSubMenu;
+                                    var subTexto = !string.IsNullOrWhiteSpace(sub.Nombre) ? $"{sub.Nombre} ({sub.Ruta})" : (sub.Ruta ?? "Submenú " + id);
+                                    <RadzenCheckBox Name="@("sub_" + id)" Checked="@_subMenuIds.Contains(id)" Change="@((bool v) => ToggleSubMenu(id, v))" Text="@subTexto" Style="display:block;margin:2px 0;font-size:12px" />
+                                }
+                            }
+                        }
+                    }
+                    @{
+                        var botonesMod = Estructura.BotonesPorModulo?.Where(b => b.IdModulo == mod.IdModulo).ToList() ?? new List<BotonDto>();
+                    }
+                    @if (botonesMod.Any())
+                    {
+                        <RadzenText TextStyle="TextStyle.Caption">Botones:</RadzenText>
+                        @foreach (var b in botonesMod)
+                        {
+                            var botTexto = !string.IsNullOrWhiteSpace(b.Nombre) ? b.Nombre : (b.Codigo ?? "Botón " + b.IdBoton);
+                            <RadzenCheckBox Name="@("bot_" + b.IdBoton)" Checked="@_botonIds.Contains(b.IdBoton)" Change="@((bool v) => ToggleBoton(b.IdBoton, v))" Text="@botTexto" Style="display:inline-block;margin:2px 12px 2px 0;font-size:12px" />
+                        }
+                    }
+                </RadzenFieldSet>
+            }
+        }
+    </div>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
+        <RadzenButton Text="Guardar permisos" ButtonStyle="ButtonStyle.Primary" Click="@Guardar" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public int IdRol { get; set; }
+    [Parameter] public EstructuraPermisosDto? Estructura { get; set; }
+    [Parameter] public PermisosRolDto? Permisos { get; set; }
+    [Parameter] public GestionUsuariosService GestionUsuarios { get; set; } = null!;
+
+    private List<int> _subMenuIds = new();
+    private List<int> _botonIds = new();
+
+    protected override void OnParametersSet()
+    {
+        _subMenuIds = Permisos?.SubMenuIds?.ToList() ?? new List<int>();
+        _botonIds = Permisos?.BotonIds?.ToList() ?? new List<int>();
+    }
+
+    private void ToggleSubMenu(int id, bool add)
+    {
+        if (add && !_subMenuIds.Contains(id)) _subMenuIds.Add(id);
+        if (!add) _subMenuIds.Remove(id);
+    }
+
+    private void ToggleBoton(int id, bool add)
+    {
+        if (add && !_botonIds.Contains(id)) _botonIds.Add(id);
+        if (!add) _botonIds.Remove(id);
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            var ok = await GestionUsuarios.PutPermisosRolAsync(IdRol, new PermisosRolDto { SubMenuIds = _subMenuIds, BotonIds = _botonIds });
+            if (ok) { Notify.ShowSuccess("Permisos guardados. El usuario deberá recargar o volver a iniciar sesión para ver los cambios."); DialogService.Close(true); }
+            else Notify.ShowError("Error al guardar.");
+        }
+        catch (Exception ex) { Notify.ShowError(ex.Message ?? "Error al guardar."); }
+    }
+}

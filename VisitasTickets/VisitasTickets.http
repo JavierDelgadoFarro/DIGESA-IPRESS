@@ -1,7 +1,0 @@
-@VisitasTickets_HostAddress = https://192.168.1.142:7248
-
-### Health check
-GET {{VisitasTickets_HostAddress}}/api/health
-Accept: application/json
-
-###

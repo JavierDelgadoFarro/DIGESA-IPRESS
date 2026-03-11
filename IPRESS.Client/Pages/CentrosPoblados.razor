@@ -1,0 +1,168 @@
+@page "/centros-poblados"
+@attribute [Authorize]
+@layout MainLayout
+@using Radzen
+@using Radzen.Blazor
+@inject MaestrosService Maestros
+@inject NotificationService Notify
+@inject PermisosService Permisos
+@inject DialogService DialogService
+
+<RadzenStack Gap="0.5rem" Style="height:100%">
+    <RadzenCard Style="padding:0.5rem;flex:1;display:flex;flex-direction:column;min-height:0">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+            <RadzenBreadcrumb>
+                <RadzenBreadcrumbItem Text="Inicio" Path="/principal" />
+                <RadzenBreadcrumbItem Text="Centros Poblados" />
+            </RadzenBreadcrumb>
+            @if (Permisos.TienePermiso("/centros-poblados", "CREAR"))
+            {
+                <RadzenButton Icon="add" Text="Nuevo centro poblado" ButtonStyle="ButtonStyle.Primary" Click="@Nuevo" />
+            }
+        </RadzenStack>
+
+        @if (mostrarFormulario)
+        {
+            <CentroPobladoFormulario Model="model" Establecimientos="establecimientos" Departamentos="departamentos"
+                GetProvincias="Maestros.GetProvinciasAsync" GetDistritos="Maestros.GetDistritosAsync"
+                OnGuardar="Guardar" OnCancelar="CancelarForm" />
+        }
+        else
+        {
+            <RadzenFieldSet Text="Listado" Icon="list" Style="margin-top:0.5rem;flex:1;min-height:0">
+                <RadzenTextBox @bind-Value="filtroBusqueda" Placeholder="Buscar por nombre, ubigeo, distrito..." Style="max-width:300px;margin-bottom:0.5rem" Change="@(() => Cargar())" />
+                <IpressDataTable TItem="CentroPobladoDto" Data="@lista" Style="flex:1" EmptyText="No hay centros poblados. No hay importación masiva; use «Nuevo centro poblado» para registrar.">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="CentroPoblado" Title="Nombre" Width="200px" />
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="Ubigeo" Title="Ubigeo" Width="90px" />
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="UbigeoCcp" Title="Ubigeo CCP" Width="100px" />
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="Departamento" Title="Departamento" Width="120px" />
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="Provincia" Title="Provincia" Width="120px" />
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="Distrito" Title="Distrito" Width="120px" />
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="EstablecimientoNombre" Title="Establecimiento" Width="180px" />
+                        <RadzenDataGridColumn TItem="CentroPobladoDto" Property="Quintil" Title="Quintil" Width="70px" />
+                        @if (Permisos.TienePermiso("/centros-poblados", "EDITAR") || Permisos.TienePermiso("/centros-poblados", "ELIMINAR"))
+                        {
+                            <RadzenDataGridColumn TItem="CentroPobladoDto" Title="Acciones" Sortable="false" Filterable="false" Width="120px">
+                                <Template Context="c">
+                                    @if (Permisos.TienePermiso("/centros-poblados", "EDITAR"))
+                                    { <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => Editar(c))" Title="Editar" /> }
+                                    @if (Permisos.TienePermiso("/centros-poblados", "ELIMINAR"))
+                                    { <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => Eliminar(c))" Title="Eliminar" /> }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        }
+                    </Columns>
+                </IpressDataTable>
+            </RadzenFieldSet>
+        }
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<CentroPobladoDto> lista = new();
+    private List<EstablecimientoListDto> establecimientos = new();
+    private List<GeografiaItemDto> departamentos = new();
+    private string filtroBusqueda = "";
+    private bool mostrarFormulario;
+    private CentroPobladoRequestDto model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        departamentos = await Maestros.GetDepartamentosAsync() ?? new();
+        establecimientos = await Maestros.GetEstablecimientosAsync() ?? new();
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        try { lista = await Maestros.GetCentrosPobladosAsync(string.IsNullOrWhiteSpace(filtroBusqueda) ? null : filtroBusqueda); }
+        catch { lista = new(); }
+    }
+
+    private void Nuevo()
+    {
+        model = new CentroPobladoRequestDto { Accesibilidades = new(), CentrosEducativos = new(), Autoridades = new() };
+        mostrarFormulario = true;
+    }
+
+    private async Task Editar(CentroPobladoDto c)
+    {
+        var full = await Maestros.GetCentroPobladoAsync(c.IdCentroPoblado);
+        if (full == null) { Notify.ShowError("No se pudo cargar el centro poblado."); return; }
+        model = new CentroPobladoRequestDto
+        {
+            Ubigeo = full.Ubigeo,
+            UbigeoCcp = full.UbigeoCcp,
+            Departamento = full.Departamento,
+            Provincia = full.Provincia,
+            Distrito = full.Distrito,
+            CentroPoblado = full.CentroPoblado,
+            IdEstablecimiento = full.IdEstablecimiento,
+            Ambito = full.Ambito,
+            Quintil = full.Quintil,
+            Este = full.Este,
+            Norte = full.Norte,
+            Huso = full.Huso,
+            Banda = full.Banda,
+            Latitud = full.Latitud,
+            Longitud = full.Longitud,
+            AltitudMsnm = full.AltitudMsnm,
+            PoblacionTotal = full.PoblacionTotal,
+            PoblacionServida = full.PoblacionServida,
+            PoblacionVigilada = full.PoblacionVigilada,
+            ElectricidadHrs = full.ElectricidadHrs,
+            TelefonoTipo = full.TelefonoTipo,
+            TelefonoNumero = full.TelefonoNumero,
+            RadioEmisora = full.RadioEmisora,
+            RadioESS = full.RadioESS,
+            SenalTV = full.SenalTV,
+            Internet = full.Internet,
+            LimpiezaPublica = full.LimpiezaPublica,
+            Agua = full.Agua,
+            Letrinas = full.Letrinas,
+            DesagueAlcantarillado = full.DesagueAlcantarillado,
+            SistEliminacionExcretas = full.SistEliminacionExcretas,
+            Vertimientos = full.Vertimientos,
+            TempMinima = full.TempMinima,
+            TempMaxima = full.TempMaxima,
+            Accesibilidades = full.Accesibilidades?.Select(a => new AccesibilidadItemDto { Desde = a.Desde, Hasta = a.Hasta, DistanciaKm = a.DistanciaKm, TiempoMin = a.TiempoMin, TipoVia = a.TipoVia, MedioTransporte = a.MedioTransporte }).ToList() ?? new(),
+            CentrosEducativos = full.CentrosEducativos?.Select(ce => new CentroEducativoItemDto { TipoCentroEducativo = ce.TipoCentroEducativo, NombreCentroEducativo = ce.NombreCentroEducativo }).ToList() ?? new(),
+            Autoridades = full.Autoridades?.Select(a => new AutoridadItemDto { TipoAutoridad = a.TipoAutoridad, NombreAutoridad = a.NombreAutoridad }).ToList() ?? new()
+        };
+        _idEdicion = c.IdCentroPoblado;
+        mostrarFormulario = true;
+    }
+
+    private int? _idEdicion;
+
+    private async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(model.CentroPoblado)) { Notify.ShowError("El nombre del centro poblado es requerido."); return; }
+        try
+        {
+            bool ok;
+            if (_idEdicion.HasValue)
+                ok = await Maestros.PutCentroPobladoAsync(_idEdicion.Value, model);
+            else
+                ok = await Maestros.PostCentroPobladoAsync(model);
+            if (ok) { Notify.ShowSuccess(_idEdicion.HasValue ? "Centro poblado actualizado." : "Centro poblado registrado."); CancelarForm(); await Cargar(); }
+            else Notify.ShowError("Error al guardar.");
+        }
+        catch (Exception ex) { Notify.ShowError(ex.Message ?? "Error al guardar."); }
+    }
+
+    private void CancelarForm()
+    {
+        mostrarFormulario = false;
+        _idEdicion = null;
+    }
+
+    private async Task Eliminar(CentroPobladoDto c)
+    {
+        if (await DialogService.Confirm("¿Eliminar el centro poblado \"" + (c.CentroPoblado ?? "") + "\"?", "Eliminar", new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" }) != true)
+            return;
+        if (await Maestros.DeleteCentroPobladoAsync(c.IdCentroPoblado)) { Notify.ShowSuccess("Eliminado."); await Cargar(); }
+        else Notify.ShowError("No se pudo eliminar.");
+    }
+}

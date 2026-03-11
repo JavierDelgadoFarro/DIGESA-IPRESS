@@ -1,0 +1,177 @@
+@page "/red"
+@attribute [Authorize]
+@layout MainLayout
+@using Radzen
+@using Radzen.Blazor
+@inject MaestrosService Maestros
+@inject NotificationService Notify
+@inject PermisosService Permisos
+@inject DialogService DialogService
+@inject IJSRuntime JS
+
+<RadzenStack Gap="0.5rem" Style="height:100%">
+    <RadzenCard Style="padding:0.5rem;flex:1;display:flex;flex-direction:column;min-height:0">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+            <RadzenBreadcrumb>
+                <RadzenBreadcrumbItem Text="Inicio" Path="/principal" />
+                <RadzenBreadcrumbItem Text="Red" />
+            </RadzenBreadcrumb>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenDropDown @bind-Value="filtroDiresa" Data="diresas" TextProperty="Nombre" ValueProperty="IdDiresa" PlaceHolder="Todas Diresas"
+                               Style="width:180px" Change="@OnFiltroChange" />
+                @if (Permisos.TienePermiso("/red", "CREAR")) { <RadzenButton Icon="add" Text="Crear" ButtonStyle="ButtonStyle.Primary" Click="@AbrirModal" /> }
+                @if (Permisos.TienePermiso("/red", "EXPORTAR") || Permisos.TienePermiso("/red", "IMPORTAR")) { <RadzenButton Icon="description" Text="Formato" ButtonStyle="ButtonStyle.Primary" Click="@DescargarFormato" /> }
+                @if (Permisos.TienePermiso("/red", "EXPORTAR")) { <RadzenButton Icon="table_view" Text="Exportar" ButtonStyle="ButtonStyle.Secondary" Click="@Exportar" /> }
+                @if (Permisos.TienePermiso("/red", "IMPORTAR")) { <RadzenButton Icon="upload" Text="Importar Excel" ButtonStyle="ButtonStyle.Primary" Click="@AbrirImportar" /> }
+            </RadzenStack>
+        </RadzenStack>
+        <IpressDataTable TItem="RedDto" Data="@items" Style="margin-top:0.5rem;flex:1">
+            <Columns>
+                <RadzenDataGridColumn TItem="RedDto" Property="Diresa" Title="Diresa" Width="140px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RedDto" Property="Codigo" Title="Código" Width="90px" Filterable="true" Sortable="true">
+                    <Template Context="r">@r.Codigo</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RedDto" Property="Nombre" Title="Nombre" Width="160px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RedDto" Property="Departamento" Title="Departamento" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RedDto" Property="Provincia" Title="Provincia" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RedDto" Property="Distrito" Title="Distrito" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RedDto" Property="Ubigeo" Title="Ubigeo" Width="90px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="RedDto" Title="Acciones" Sortable="false" Filterable="false" Width="120px" Frozen="true" TextAlign="TextAlign.Center">
+                    <Template Context="r">
+                        @if (Permisos.TienePermiso("/red", "EDITAR")) { <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => Editar(r))" /> }
+                        @if (Permisos.TienePermiso("/red", "ELIMINAR")) { <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => Eliminar(r))" /> }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </IpressDataTable>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<RedDto> items = new();
+    private List<DiresaDto> diresas = new();
+    private int filtroDiresa;
+    private RedDto form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            diresas = await Maestros.GetDiresasAsync() ?? new List<DiresaDto>();
+            diresas.Insert(0, new DiresaDto { IdDiresa = 0, Nombre = "Todas Diresas" });
+        }
+        catch (Exception ex)
+        {
+            diresas = new List<DiresaDto> { new DiresaDto { IdDiresa = 0, Nombre = "Todas Diresas" } };
+            var msg = ex.Message?.Contains("fetch", StringComparison.OrdinalIgnoreCase) == true || ex.Message?.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) == true
+                ? "No se pudo conectar con el servidor. Verifique que la API esté en ejecución."
+                : "No se pudieron cargar los datos. Intente de nuevo o recargue la página.";
+            Notify.ShowError(msg);
+        }
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            items = await Maestros.GetRedesAsync(filtroDiresa > 0 ? filtroDiresa : null) ?? new List<RedDto>();
+        }
+        catch (Exception ex)
+        {
+            var msg = ex.Message?.Contains("fetch", StringComparison.OrdinalIgnoreCase) == true || ex.Message?.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) == true
+                ? "No se pudo conectar con el servidor. Verifique que la API esté en ejecución."
+                : "No se pudieron cargar los datos. Intente de nuevo o recargue la página.";
+            Notify.ShowError(msg);
+            items ??= new List<RedDto>();
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnFiltroChange()
+    {
+        await Cargar();
+    }
+
+    private async Task AbrirModal()
+    {
+        form = new RedDto { IdDiresa = filtroDiresa > 0 ? filtroDiresa : diresas.FirstOrDefault(d => d.IdDiresa > 0)?.IdDiresa ?? 0 };
+        var guardado = await DialogService.OpenAsync<RedForm>("Nueva Red", new Dictionary<string, object> { ["form"] = form, ["diresas"] = diresas.Where(d => d.IdDiresa > 0).ToList() }, new DialogOptions { Width = "700px" });
+        if (guardado == true) { await Cargar(); StateHasChanged(); }
+    }
+
+    private async Task Editar(RedDto r)
+    {
+        form = new RedDto { IdRed = r.IdRed, IdDiresa = r.IdDiresa, Codigo = r.Codigo, Nombre = r.Nombre, Departamento = r.Departamento, Provincia = r.Provincia, Distrito = r.Distrito, Ubigeo = r.Ubigeo };
+        var guardado = await DialogService.OpenAsync<RedForm>("Editar Red", new Dictionary<string, object> { ["form"] = form, ["diresas"] = diresas.Where(d => d.IdDiresa > 0).ToList() }, new DialogOptions { Width = "700px" });
+        if (guardado == true) { await Cargar(); StateHasChanged(); }
+    }
+
+    private async Task Eliminar(RedDto r)
+    {
+        if (await DialogService.Confirm("¿Eliminar " + r.Nombre + "?", "Confirmar", new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" }) == true)
+        {
+            var ok = await Maestros.DeleteRedAsync(r.IdRed);
+            if (ok) { Notify.ShowSuccess("Eliminado."); await Cargar(); }
+            else Notify.ShowError("Error al eliminar.");
+        }
+    }
+
+    private async Task DescargarFormato()
+    {
+        try
+        {
+            var bytes = await Maestros.DescargarFormatoRedAsync();
+            if (bytes == null || bytes.Length == 0)
+            {
+                Notify.ShowError("No se pudo descargar el formato. Verifique su conexión o intente de nuevo.");
+                return;
+            }
+            await JS.InvokeVoidAsync("downloadFileFromBase64", "Formato_Red.xlsx", Convert.ToBase64String(bytes));
+            Notify.ShowInfo("Formato descargado.");
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al descargar el formato. Intente de nuevo.");
+        }
+    }
+
+    private async Task Exportar()
+    {
+        try
+        {
+            var bytes = await Maestros.ExportarRedAsync();
+            if (bytes == null || bytes.Length == 0)
+            {
+                Notify.ShowError("No se pudo exportar. Verifique su conexión o intente de nuevo.");
+                return;
+            }
+            await JS.InvokeVoidAsync("downloadFileFromBase64", "Redes.xlsx", Convert.ToBase64String(bytes));
+            Notify.ShowInfo("Exportación generada.");
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al exportar. Intente de nuevo.");
+        }
+    }
+
+    private async Task AbrirImportar()
+    {
+        try
+        {
+            await DialogService.OpenAsync<ImportExcelDialog>("Carga masiva de Red",
+                new Dictionary<string, object>
+                {
+                    ["PreviewWithErrorFn"] = (Func<Stream, string, Task<(ImportPreviewDto?, string?)>>)(async (s, n) => await Maestros.PreviewRedAsyncWithError(s, n)),
+                    ["ImportFn"] = (Func<Stream, string, Task<ImportResultDto?>>)(async (s, n) => await Maestros.ImportarRedAsync(s, n)),
+                    ["OnImported"] = EventCallback.Factory.Create(this, Cargar)
+                },
+                new DialogOptions { Width = "900px", Height = "720px" });
+            await Cargar();
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Se cerró el cuadro de importación. La sesión se mantiene.");
+        }
+    }
+}

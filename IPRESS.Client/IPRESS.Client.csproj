@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- RZ10012: Radzen se usa con @using en _Imports.razor; el analizador a veces no lo resuelve -->
+    <NoWarn>$(NoWarn);RZ10012</NoWarn>
+    <!-- Reduce tamaño del bundle en publicación -->
+    <BlazorWebAssemblyLoadAllGlobalizationData>false</BlazorWebAssemblyLoadAllGlobalizationData>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazored.LocalStorage" Version="4.3.0" />
+    <PackageReference Include="Radzen.Blazor" Version="4.28.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.24" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.24" PrivateAssets="all" />
+	<PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IPRESS.Application\IPRESS.Application.csproj" />
+    <ProjectReference Include="..\IPRESS.Domain\IPRESS.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Radzen" />
+    <Using Include="Radzen.Blazor" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,121 @@
+@page "/"
+@page "/login"
+@layout LoginLayout
+@attribute [AllowAnonymous]
+@using Radzen
+@using Radzen.Blazor
+@inject AuthService AuthService
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthProvider
+@inject ILocalStorageService _localStorage
+@inject UsuarioService UsuarioService
+@inject NotificationService Notify
+@inject DialogService DialogService
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using Blazored.LocalStorage
+@using IPRESS.Client.Services
+@using IPRESS.Client.Models
+
+<RadzenStack JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Style="min-height:100vh;padding:0.5rem">
+    <RadzenCard Style="max-width:380px;width:100%;padding:1rem">
+        <RadzenStack Gap="0.75rem">
+            <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem">
+                <div style="width:48px;height:48px;border:1px solid var(--rz-base-300);display:flex;align-items:center;justify-content:center;font-size:20px">🇵🇪</div>
+                <div>
+                    <div style="font-size:10px;font-weight:600;color:var(--rz-base-500)">REPÚBLICA DEL PERÚ</div>
+                    <div style="display:flex;margin-top:2px">
+                        <div style="background:#dc2626;color:white;font-size:11px;font-weight:700;padding:4px 8px">PERÚ</div>
+                        <div style="background:#374151;color:white;font-size:10px;padding:4px 6px">Ministerio de Salud</div>
+                    </div>
+                </div>
+            </div>
+            <RadzenText TextStyle="TextStyle.H5" Style="text-align:center">Registro de Establecimientos de Salud</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" Style="text-align:center;color:var(--rz-base-500)">IPRESS v1.0</RadzenText>
+            <EditForm Model="@this" OnValidSubmit="DoLogin">
+                <RadzenStack Gap="1rem">
+                    <RadzenFormField Text="Usuario" Variant="Variant.Outlined" AllowFloatingLabel="false">
+                        <RadzenTextBox @bind-Value="username" Style="width:100%" Disabled="@isLoading" />
+                    </RadzenFormField>
+                    <RadzenFormField Text="Contraseña" Variant="Variant.Outlined" AllowFloatingLabel="false">
+                        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--rz-base-300);border-radius:4px;overflow:hidden;">
+                            @if (showPassword)
+                            {
+                                <RadzenTextBox @bind-Value="password" Style="flex:1;border:none;box-shadow:none" Disabled="@isLoading" />
+                            }
+                            else
+                            {
+                                <RadzenPassword @bind-Value="password" Style="flex:1;border:none;box-shadow:none" Disabled="@isLoading" />
+                            }
+                            <RadzenButton type="button" Icon="@(showPassword ? "visibility_off" : "visibility")" ButtonStyle="ButtonStyle.Light" Click="@TogglePassword" Style="min-width:2.5rem;flex-shrink:0" Title="@(showPassword ? "Ocultar contraseña" : "Ver contraseña")" />
+                        </div>
+                    </RadzenFormField>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Danger" ShowIcon="true" Variant="Variant.Flat">@errorMessage</RadzenAlert>
+                    }
+                    <RadzenButton ButtonType="ButtonType.Submit" Text="@(isLoading ? "Iniciando sesión..." : "Iniciar Sesión")" Icon="@(isLoading ? null : "login")"
+                                 ButtonStyle="ButtonStyle.Primary" Disabled="@isLoading" Style="width:100%" />
+                </RadzenStack>
+            </EditForm>
+        </RadzenStack>
+    </RadzenCard>
+</RadzenStack>
+<RadzenComponents />
+
+@code {
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+    private bool showPassword = false;
+
+    private void TogglePassword() => showPassword = !showPassword;
+
+    private async Task DoLogin()
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Por favor, complete todos los campos.";
+            return;
+        }
+        errorMessage = string.Empty;
+        isLoading = true;
+        try
+        {
+            var result = await AuthService.LoginAsync(username, password);
+            if (result.RequiereCambio)
+            {
+                // Token ya guardado por AuthService; el usuario puede llamar a cambiar-password con autorización
+                var cambioOk = await DialogService.OpenAsync<LoginCambioPassword>("Cambiar Contraseña",
+                    new Dictionary<string, object> { ["UsuarioId"] = result.UsuarioId },
+                    new DialogOptions { Width = "360px", CloseDialogOnOverlayClick = false });
+                if (cambioOk == true)
+                {
+                    NavManager.NavigateTo("/login", true);
+                    return;
+                }
+            }
+            if (!string.IsNullOrEmpty(result.Token) && !result.RequiereCambio)
+            {
+                ((CustomAuthStateProvider)AuthProvider).NotifyUserAuthentication(result.Token);
+                await Task.Delay(100);
+                NavManager.NavigateTo("/principal");
+            }
+            else if (string.IsNullOrEmpty(result.Token))
+            {
+                errorMessage = result.Message ?? "Credenciales inválidas.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Error al conectar con el servidor.";
+        }
+        catch
+        {
+            errorMessage = "Error inesperado.";
+        }
+        finally { isLoading = false; }
+    }
+
+}

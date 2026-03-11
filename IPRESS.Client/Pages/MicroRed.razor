@@ -1,0 +1,177 @@
+@page "/microred"
+@attribute [Authorize]
+@layout MainLayout
+@using Radzen
+@using Radzen.Blazor
+@inject MaestrosService Maestros
+@inject NotificationService Notify
+@inject PermisosService Permisos
+@inject DialogService DialogService
+@inject IJSRuntime JS
+
+<RadzenStack Gap="0.5rem" Style="height:100%">
+    <RadzenCard Style="padding:0.5rem;flex:1;display:flex;flex-direction:column;min-height:0">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+            <RadzenBreadcrumb>
+                <RadzenBreadcrumbItem Text="Inicio" Path="/principal" />
+                <RadzenBreadcrumbItem Text="MicroRed" />
+            </RadzenBreadcrumb>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenDropDown @bind-Value="filtroRed" Data="redes" TextProperty="Nombre" ValueProperty="IdRed" PlaceHolder="Todas Redes"
+                               Style="width:180px" Change="@OnFiltroChange" />
+                @if (Permisos.TienePermiso("/microred", "CREAR")) { <RadzenButton Icon="add" Text="Crear" ButtonStyle="ButtonStyle.Primary" Click="@AbrirModal" /> }
+                @if (Permisos.TienePermiso("/microred", "EXPORTAR") || Permisos.TienePermiso("/microred", "IMPORTAR")) { <RadzenButton Icon="description" Text="Formato" ButtonStyle="ButtonStyle.Primary" Click="@DescargarFormato" /> }
+                @if (Permisos.TienePermiso("/microred", "EXPORTAR")) { <RadzenButton Icon="table_view" Text="Exportar" ButtonStyle="ButtonStyle.Secondary" Click="@Exportar" /> }
+                @if (Permisos.TienePermiso("/microred", "IMPORTAR")) { <RadzenButton Icon="upload" Text="Importar Excel" ButtonStyle="ButtonStyle.Primary" Click="@AbrirImportar" /> }
+            </RadzenStack>
+        </RadzenStack>
+        <IpressDataTable TItem="MicroRedDto" Data="@items" Style="margin-top:0.5rem;flex:1">
+            <Columns>
+                <RadzenDataGridColumn TItem="MicroRedDto" Property="Red" Title="Red" Width="140px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="MicroRedDto" Property="Codigo" Title="Código" Width="90px" Filterable="true" Sortable="true">
+                    <Template Context="m">@m.Codigo</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="MicroRedDto" Property="Nombre" Title="Nombre" Width="160px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="MicroRedDto" Property="Departamento" Title="Departamento" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="MicroRedDto" Property="Provincia" Title="Provincia" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="MicroRedDto" Property="Distrito" Title="Distrito" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="MicroRedDto" Property="Ubigeo" Title="Ubigeo" Width="90px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="MicroRedDto" Title="Acciones" Sortable="false" Filterable="false" Width="120px" Frozen="true" TextAlign="TextAlign.Center">
+                    <Template Context="m">
+                        @if (Permisos.TienePermiso("/microred", "EDITAR")) { <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => Editar(m))" /> }
+                        @if (Permisos.TienePermiso("/microred", "ELIMINAR")) { <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => Eliminar(m))" /> }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </IpressDataTable>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<MicroRedDto> items = new();
+    private List<RedDto> redes = new();
+    private int filtroRed;
+    private MicroRedDto form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            redes = await Maestros.GetRedesAsync() ?? new List<RedDto>();
+            redes.Insert(0, new RedDto { IdRed = 0, Nombre = "Todas Redes" });
+        }
+        catch (Exception ex)
+        {
+            redes = new List<RedDto> { new RedDto { IdRed = 0, Nombre = "Todas Redes" } };
+            var msg = ex.Message?.Contains("fetch", StringComparison.OrdinalIgnoreCase) == true || ex.Message?.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) == true
+                ? "No se pudo conectar con el servidor. Verifique que la API esté en ejecución."
+                : "No se pudieron cargar los datos. Intente de nuevo o recargue la página.";
+            Notify.ShowError(msg);
+        }
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            items = await Maestros.GetMicroRedesAsync(filtroRed > 0 ? filtroRed : null) ?? new List<MicroRedDto>();
+        }
+        catch (Exception ex)
+        {
+            var msg = ex.Message?.Contains("fetch", StringComparison.OrdinalIgnoreCase) == true || ex.Message?.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) == true
+                ? "No se pudo conectar con el servidor. Verifique que la API esté en ejecución."
+                : "No se pudieron cargar los datos. Intente de nuevo o recargue la página.";
+            Notify.ShowError(msg);
+            items ??= new List<MicroRedDto>();
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnFiltroChange()
+    {
+        await Cargar();
+    }
+
+    private async Task AbrirModal()
+    {
+        form = new MicroRedDto { IdRed = filtroRed > 0 ? filtroRed : redes.FirstOrDefault(r => r.IdRed > 0)?.IdRed ?? 0 };
+        await DialogService.OpenAsync<MicroRedForm>("Nueva MicroRed", new Dictionary<string, object> { ["form"] = form, ["redes"] = redes.Where(r => r.IdRed > 0).ToList() }, new DialogOptions { Width = "700px" });
+        await Cargar();
+    }
+
+    private async Task Editar(MicroRedDto m)
+    {
+        form = new MicroRedDto { IdMicroRed = m.IdMicroRed, IdRed = m.IdRed, Codigo = m.Codigo, Nombre = m.Nombre, Departamento = m.Departamento, Provincia = m.Provincia, Distrito = m.Distrito, Ubigeo = m.Ubigeo };
+        await DialogService.OpenAsync<MicroRedForm>("Editar MicroRed", new Dictionary<string, object> { ["form"] = form, ["redes"] = redes.Where(r => r.IdRed > 0).ToList() }, new DialogOptions { Width = "700px" });
+        await Cargar();
+    }
+
+    private async Task Eliminar(MicroRedDto m)
+    {
+        if (await DialogService.Confirm("¿Eliminar " + m.Nombre + "?", "Confirmar", new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" }) == true)
+        {
+            var ok = await Maestros.DeleteMicroRedAsync(m.IdMicroRed);
+            if (ok) { Notify.ShowSuccess("Eliminado."); await Cargar(); }
+            else Notify.ShowError("Error al eliminar.");
+        }
+    }
+
+    private async Task DescargarFormato()
+    {
+        try
+        {
+            var bytes = await Maestros.DescargarFormatoMicroRedAsync();
+            if (bytes == null || bytes.Length == 0)
+            {
+                Notify.ShowError("No se pudo descargar el formato. Verifique su conexión o intente de nuevo.");
+                return;
+            }
+            await JS.InvokeVoidAsync("downloadFileFromBase64", "Formato_MicroRed.xlsx", Convert.ToBase64String(bytes));
+            Notify.ShowInfo("Formato descargado.");
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al descargar el formato. Intente de nuevo.");
+        }
+    }
+
+    private async Task Exportar()
+    {
+        try
+        {
+            var bytes = await Maestros.ExportarMicroRedAsync();
+            if (bytes == null || bytes.Length == 0)
+            {
+                Notify.ShowError("No se pudo exportar. Verifique su conexión o intente de nuevo.");
+                return;
+            }
+            await JS.InvokeVoidAsync("downloadFileFromBase64", "MicroRedes.xlsx", Convert.ToBase64String(bytes));
+            Notify.ShowInfo("Exportación generada.");
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al exportar. Intente de nuevo.");
+        }
+    }
+
+    private async Task AbrirImportar()
+    {
+        try
+        {
+            await DialogService.OpenAsync<ImportExcelDialog>("Carga masiva de MicroRed",
+                new Dictionary<string, object>
+                {
+                    ["PreviewWithErrorFn"] = (Func<Stream, string, Task<(ImportPreviewDto?, string?)>>)(async (s, n) => await Maestros.PreviewMicroRedAsyncWithError(s, n)),
+                    ["ImportFn"] = (Func<Stream, string, Task<ImportResultDto?>>)(async (s, n) => await Maestros.ImportarMicroRedAsync(s, n)),
+                    ["OnImported"] = EventCallback.Factory.Create(this, Cargar)
+                },
+                new DialogOptions { Width = "900px", Height = "720px" });
+            await Cargar();
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Se cerró el cuadro de importación. La sesión se mantiene.");
+        }
+    }
+}

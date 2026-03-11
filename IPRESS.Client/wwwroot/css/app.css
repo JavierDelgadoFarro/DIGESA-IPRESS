@@ -1,0 +1,287 @@
+/* IPRESS - Estilos de aplicación (sin Tailwind; UI con Radzen + CSS propio) */
+/* Fuente global un poco más pequeña; no aplicar a .rz-icon para evitar ver "arrow_drop_up", "sort", "array" en lugar del glifo */
+html, body, .rz-body, .rz-datatable, .rz-button, .rz-fieldset-legend, input, select, label {
+  font-family: Arial, Calibri, 'Segoe UI', sans-serif !important;
+  font-size: 14px;
+}
+/* No forzar Arial en iconos: .rz-icon y similares se estilizan en ipress-theme.css */
+
+/* Pantalla de carga inicial (#app antes de que Blazor monte) */
+#app .loading-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9);
+}
+
+#app .loading-box {
+    text-align: center;
+}
+
+#app .loading-logo {
+    width: 6rem;
+    height: 6rem;
+    background: linear-gradient(to right, #2563eb, #1e40af);
+    border-radius: 50%;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+#app .loading-logo svg {
+    width: 3.5rem;
+    height: 3.5rem;
+    color: white;
+}
+
+#app .loading-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+#app .loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+#app .loading-spinner svg {
+    animation: spin 1s linear infinite;
+    height: 2rem;
+    width: 2rem;
+    color: #2563eb;
+}
+
+#app .loading-spinner .opacity-25 {
+    opacity: 0.25;
+}
+
+#app .loading-spinner .opacity-75 {
+    opacity: 0.75;
+}
+
+#app .loading-text {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-top: 1rem;
+}
+
+@keyframes pulse {
+    50% { opacity: 0.8; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Barra de error de Blazor */
+#blazor-error-ui {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #dc2626;
+    color: white;
+    padding: 1rem;
+    box-shadow: 0 -4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+#blazor-error-ui.hidden {
+    display: none !important;
+}
+
+#blazor-error-ui .error-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#blazor-error-ui .error-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+#blazor-error-ui .error-content svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+}
+
+#blazor-error-ui .error-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+#blazor-error-ui a {
+    color: inherit;
+}
+
+#blazor-error-ui a.underline {
+    text-decoration: underline;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+#blazor-error-ui a:hover,
+#blazor-error-ui .dismiss:hover {
+    color: #fecaca;
+}
+
+/* Pantallas de estado en App.razor (Authorizing, NotFound) */
+.app-state-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #fff;
+}
+
+.app-state-screen.center {
+    text-align: center;
+}
+
+.app-state-screen .state-logo {
+    width: 6rem;
+    height: 6rem;
+    background: linear-gradient(to right, #2563eb, #1e40af);
+    border-radius: 50%;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.app-state-screen .state-logo svg {
+    width: 3.5rem;
+    height: 3.5rem;
+    color: white;
+}
+
+.app-state-screen .state-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.app-state-screen .state-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.app-state-screen .state-spinner svg {
+    animation: spin 1s linear infinite;
+    height: 2rem;
+    width: 2rem;
+    color: #2563eb;
+}
+
+.app-state-screen .state-text {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-top: 1rem;
+}
+
+.app-state-screen .state-404 {
+    font-size: 3.75rem;
+    font-weight: 700;
+    color: #d1d5db;
+}
+
+.app-state-screen .state-404-text {
+    font-size: 1.25rem;
+    color: #4b5563;
+    margin-top: 1rem;
+}
+
+.app-state-screen .state-link {
+    margin-top: 1.5rem;
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #2563eb;
+    color: white;
+    border-radius: 0.5rem;
+    text-decoration: none;
+}
+
+.app-state-screen .state-link:hover {
+    background: #1d4ed8;
+}
+
+/* PublicLayout.razor (páginas públicas sin Radzen) */
+.public-layout {
+    min-height: 100vh;
+}
+
+.public-layout header {
+    background: #fff;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.public-layout .header-inner {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.public-layout .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.public-layout .header-brand img {
+    height: 3rem;
+}
+
+.public-layout .header-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+.public-layout .header-subtitle {
+    font-size: 0.75rem;
+    color: #4b5563;
+}
+
+.public-layout footer {
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    padding: 1.5rem 0;
+    margin-top: 3rem;
+}
+
+.public-layout .footer-inner {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    text-align: center;
+}
+
+.public-layout .footer-inner p {
+    font-size: 0.875rem;
+    color: #4b5563;
+}

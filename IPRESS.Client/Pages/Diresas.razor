@@ -1,0 +1,176 @@
+@page "/diresas"
+@attribute [Authorize]
+@layout MainLayout
+@using Radzen
+@using Radzen.Blazor
+@inject MaestrosService Maestros
+@inject NotificationService Notify
+@inject PermisosService Permisos
+@inject DialogService DialogService
+@inject IJSRuntime JS
+
+<RadzenStack Gap="0.5rem" Style="height:100%">
+    <RadzenCard Style="padding:0.5rem;flex:1;display:flex;flex-direction:column;min-height:0">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+            <RadzenBreadcrumb>
+                <RadzenBreadcrumbItem Text="Inicio" Path="/principal" />
+                <RadzenBreadcrumbItem Text="Diresas" />
+            </RadzenBreadcrumb>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                @if (Permisos.TienePermiso("/diresas", "CREAR"))
+                {
+                    <RadzenButton Icon="add" Text="Crear" ButtonStyle="ButtonStyle.Primary" Click="@AbrirModal" />
+                }
+                @if (Permisos.TienePermiso("/diresas", "EXPORTAR") || Permisos.TienePermiso("/diresas", "IMPORTAR"))
+                {
+                    <RadzenButton Icon="description" Text="Formato" ButtonStyle="ButtonStyle.Primary" Click="@DescargarFormato" />
+                }
+                @if (Permisos.TienePermiso("/diresas", "EXPORTAR"))
+                {
+                    <RadzenButton Icon="table_view" Text="Exportar" ButtonStyle="ButtonStyle.Secondary" Click="@Exportar" />
+                }
+                @if (Permisos.TienePermiso("/diresas", "IMPORTAR"))
+                {
+                    <RadzenButton Icon="upload" Text="Importar Excel" ButtonStyle="ButtonStyle.Primary" Click="@AbrirImportar" />
+                }
+            </RadzenStack>
+        </RadzenStack>
+        <IpressDataTable TItem="DiresaDto" Data="@items" Style="margin-top:0.5rem;flex:1">
+            <Columns>
+                <RadzenDataGridColumn TItem="DiresaDto" Property="Codigo" Title="Código" Width="90px" Filterable="true" Sortable="true">
+                    <Template Context="d">@d.Codigo</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DiresaDto" Property="Nombre" Title="Diresa" Width="160px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="DiresaDto" Property="Departamento" Title="Departamento" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="DiresaDto" Property="Provincia" Title="Provincia" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="DiresaDto" Property="Distrito" Title="Distrito" Width="130px" Filterable="true" Sortable="true" />
+                <RadzenDataGridColumn TItem="DiresaDto" Property="Ubigeo" Title="Ubigeo" Width="90px" Filterable="true" Sortable="true">
+                    <Template Context="d">@(d.Ubigeo?.Length == 6 ? d.Ubigeo : "")</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="DiresaDto" Title="Acciones" Sortable="false" Filterable="false" Width="120px" Frozen="true" TextAlign="TextAlign.Center">
+                    <Template Context="d">
+                        @if (Permisos.TienePermiso("/diresas", "EDITAR"))
+                        { <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => Editar(d))" /> }
+                        @if (Permisos.TienePermiso("/diresas", "ELIMINAR"))
+                        { <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => Eliminar(d))" /> }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </IpressDataTable>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<DiresaDto> items = new();
+    private DiresaDto? editando;
+    private DiresaDto form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            items = await Maestros.GetDiresasAsync() ?? new List<DiresaDto>();
+        }
+        catch (Exception ex)
+        {
+            var msg = ex.Message?.Contains("fetch", StringComparison.OrdinalIgnoreCase) == true || ex.Message?.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) == true
+                ? "No se pudo conectar con el servidor. Asegúrese de ejecutar el proyecto IPRESS.API (no el Client). Si acaba de iniciar, espere unos segundos y recargue."
+                : "No se pudieron cargar los datos. Intente de nuevo o recargue la página.";
+            Notify.ShowError(msg);
+            items ??= new List<DiresaDto>();
+        }
+        StateHasChanged();
+    }
+
+    private async Task AbrirModal()
+    {
+        editando = null;
+        form = new DiresaDto();
+        await DialogService.OpenAsync<DiresaForm>("Nueva Diresa", new Dictionary<string, object> { ["form"] = form, ["diresas"] = items },
+            new DialogOptions { Width = "800px", Resizable = false, Draggable = false });
+        await Cargar();
+    }
+
+    private async Task Editar(DiresaDto d)
+    {
+        editando = d;
+        form = new DiresaDto { IdDiresa = d.IdDiresa, Codigo = d.Codigo, Nombre = d.Nombre, Departamento = d.Departamento, Provincia = d.Provincia, Distrito = d.Distrito, Ubigeo = d.Ubigeo };
+        await DialogService.OpenAsync<DiresaForm>("Editar Diresa", new Dictionary<string, object> { ["form"] = form, ["diresas"] = items },
+            new DialogOptions { Width = "800px", Resizable = false, Draggable = false });
+        await Cargar();
+    }
+
+    private async Task Eliminar(DiresaDto d)
+    {
+        var confirmado = await DialogService.Confirm("¿Eliminar " + d.Nombre + "?", "Confirmar eliminación", new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+        if (confirmado == true)
+        {
+            var (ok, errorMsg) = await Maestros.DeleteDiresaAsync(d.IdDiresa);
+            if (ok) { Notify.ShowSuccess("Eliminado."); await Cargar(); }
+            else Notify.ShowError(errorMsg ?? "Error al eliminar.");
+        }
+    }
+
+    private async Task DescargarFormato()
+    {
+        try
+        {
+            var bytes = await Maestros.DescargarFormatoDiresasAsync();
+            if (bytes == null || bytes.Length == 0)
+            {
+                Notify.ShowError("No se pudo descargar el formato. Compruebe que ha iniciado sesión y que está ejecutando el proyecto IPRESS.API. Si acaba de iniciar, espere unos segundos y vuelva a intentar.");
+                return;
+            }
+            await JS.InvokeVoidAsync("downloadFileFromBase64", "Formato_Diresas.xlsx", Convert.ToBase64String(bytes));
+            Notify.ShowInfo("Formato descargado.");
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al descargar el formato. Intente de nuevo.");
+        }
+    }
+
+    private async Task Exportar()
+    {
+        try
+        {
+            var bytes = await Maestros.ExportarDiresasAsync();
+            if (bytes == null || bytes.Length == 0)
+            {
+                Notify.ShowError("No se pudo exportar. Verifique su conexión o intente de nuevo.");
+                return;
+            }
+            await JS.InvokeVoidAsync("downloadFileFromBase64", "Diresas.xlsx", Convert.ToBase64String(bytes));
+            Notify.ShowInfo("Exportación generada.");
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Error al exportar. Intente de nuevo.");
+        }
+    }
+
+    private async Task AbrirImportar()
+    {
+        try
+        {
+            await DialogService.OpenAsync<ImportExcelDialog>("Carga masiva de Diresas",
+                new Dictionary<string, object>
+                {
+                    ["PreviewWithErrorFn"] = (Func<Stream, string, Task<(ImportPreviewDto?, string?)>>)(async (s, n) => await Maestros.PreviewDiresasAsyncWithError(s, n)),
+                    ["ImportFn"] = (Func<Stream, string, Task<ImportResultDto?>>)(async (s, n) => await Maestros.ImportarDiresasAsync(s, n)),
+                    ["OnImported"] = EventCallback.Factory.Create(this, Cargar)
+                },
+                new DialogOptions { Width = "900px", Height = "720px" });
+            await Cargar();
+        }
+        catch (Exception)
+        {
+            Notify.ShowError("Se cerró el cuadro de importación. La sesión se mantiene.");
+        }
+    }
+}

@@ -1,0 +1,159 @@
+@using Radzen
+@using Radzen.Blazor
+@inject NotificationService Notify
+
+<RadzenStack Gap="0.75rem" Style="display:flex;flex-direction:column;flex:1;min-height:0;">
+    <RadzenText TextStyle="TextStyle.Body2">Marque cada menú que este rol podrá ver y los botones (Crear, Editar, Eliminar, etc.) que tendrá en cada uno.</RadzenText>
+    <div style="flex:1;min-height:0;overflow:auto;border:1px solid var(--rz-base-300);border-radius:4px;padding:12px;background:var(--rz-base-50);">
+        <style>
+            .rz-perm-row { margin: 4px 0; }
+            .rz-perm-row label { user-select: none; }
+            .rz-perm-menu-block { border: 1px solid var(--rz-base-200); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fff; }
+        </style>
+        @if (Estructura != null && Estructura.Estructura != null && Estructura.Estructura.Count > 0)
+        {
+            @foreach (var mod in Estructura.Estructura)
+            {
+                @if (mod.Menus != null && mod.Menus.Count > 0)
+                {
+                    @foreach (var menu in mod.Menus)
+                    {
+                        @if (menu?.SubMenus != null)
+                        {
+                            @foreach (var sub in menu.SubMenus)
+                            {
+                                var id = sub.IdSubMenu;
+                                var subNombre = (sub?.Nombre ?? "").Trim();
+                                var subRuta = (sub?.Ruta ?? "").Trim();
+                                var subTexto = !string.IsNullOrEmpty(subNombre)
+                                    ? (string.IsNullOrEmpty(subRuta) ? subNombre : $"{subNombre} ({sub.Ruta})")
+                                    : (!string.IsNullOrEmpty(subRuta) ? subRuta : "Submenú " + id);
+                                var codigoRuta = (subRuta ?? "").TrimStart('/').ToUpperInvariant().Replace(" ", "");
+                                var modDelSub = string.IsNullOrEmpty(codigoRuta) ? null : Estructura.Estructura.FirstOrDefault(m => (m.Codigo ?? "").ToUpperInvariant().Replace(" ", "") == codigoRuta);
+                                if (modDelSub == null && (subRuta ?? "").ToUpperInvariant().Contains("PRINCIPAL"))
+                                    modDelSub = Estructura.Estructura.FirstOrDefault(m => (m.Codigo ?? "").ToUpperInvariant().Contains("INICIO") || (m.Nombre ?? "").ToUpperInvariant().Contains("INICIO"));
+                                var botonesDelModulo = modDelSub != null ? (Estructura.BotonesPorModulo?.Where(b => b.IdModulo == modDelSub.IdModulo).ToList() ?? new List<BotonDto>()) : new List<BotonDto>();
+                                <div class="rz-perm-menu-block">
+                                    <div class="rz-perm-row" style="margin-bottom:8px;">
+                                        <input type="checkbox" id="@("sub_" + id)" checked="@_subMenuIds.Contains(id)" @onchange="@(e => { var v = e.Value as bool? ?? false; ToggleSubMenu(id, v); })" style="display:inline-block;vertical-align:middle;margin-right:6px;width:1rem;height:1rem" aria-label="@subTexto" />
+                                        <label for="@("sub_" + id)" style="font-size:13px;font-weight:600;cursor:pointer;margin:0;vertical-align:middle">@subTexto</label>
+                                    </div>
+                                    @if (botonesDelModulo.Any())
+                                    {
+                                        <div class="rz-menu-title" style="font-weight:600;font-size:12px;color:var(--rz-base-700);margin:6px 0 4px 0;">Botones de este menú</div>
+                                        <div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;">
+                                            @foreach (var b in botonesDelModulo)
+                                            {
+                                                var bot = b!;
+                                                var botNombre = (bot.Nombre ?? "").Trim();
+                                                var botCodigo = (bot.Codigo ?? "").Trim();
+                                                var botTexto = !string.IsNullOrEmpty(botNombre) ? botNombre : (!string.IsNullOrEmpty(botCodigo) ? botCodigo : "Botón " + bot.IdBoton);
+                                                <div class="rz-perm-row" style="display:inline-flex;align-items:center;">
+                                                    <input type="checkbox" id="@("bot_" + bot.IdBoton + "_" + id)" checked="@_botonIds.Contains(bot.IdBoton)" @onchange="@(e => { var v = e.Value as bool? ?? false; ToggleBoton(bot.IdBoton, v); })" style="display:inline-block;vertical-align:middle;margin-right:4px;width:1rem;height:1rem" aria-label="@botTexto" />
+                                                    <label for="@("bot_" + bot.IdBoton + "_" + id)" style="font-size:13px;cursor:pointer;margin:0;vertical-align:middle">@botTexto</label>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            <RadzenText TextStyle="TextStyle.Body2">No hay menús configurados. Verifique la estructura en base de datos.</RadzenText>
+        }
+    </div>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Guardar permisos" Icon="save" ButtonStyle="ButtonStyle.Primary" Click="@Guardar" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public int IdRol { get; set; }
+    [Parameter] public EstructuraPermisosDto? Estructura { get; set; }
+    [Parameter] public PermisosRolDto? Permisos { get; set; }
+    [Parameter] public GestionUsuariosService GestionUsuarios { get; set; } = null!;
+    [Parameter] public EventCallback OnGuardado { get; set; }
+
+    private List<int> _subMenuIds = new();
+    private List<int> _botonIds = new();
+
+    protected override void OnParametersSet()
+    {
+        _subMenuIds = Permisos?.SubMenuIds?.ToList() ?? new List<int>();
+        _botonIds = Permisos?.BotonIds?.ToList() ?? new List<int>();
+    }
+
+    private void ToggleSubMenu(int id, bool add)
+    {
+        var botonesDeEsteMenu = GetBotonesIdsParaSubmenu(id);
+        if (add)
+        {
+            if (!_subMenuIds.Contains(id)) _subMenuIds.Add(id);
+            foreach (var bid in botonesDeEsteMenu)
+                if (!_botonIds.Contains(bid)) _botonIds.Add(bid);
+        }
+        else
+        {
+            _subMenuIds.Remove(id);
+            foreach (var bid in botonesDeEsteMenu)
+                _botonIds.Remove(bid);
+        }
+        StateHasChanged();
+    }
+
+    private List<int> GetBotonesIdsParaSubmenu(int idSubMenu)
+    {
+        if (Estructura?.Estructura == null || Estructura.BotonesPorModulo == null) return new List<int>();
+        foreach (var mod in Estructura.Estructura)
+        {
+            if (mod.Menus == null) continue;
+            foreach (var menu in mod.Menus)
+            {
+                var sub = menu.SubMenus?.FirstOrDefault(s => s.IdSubMenu == idSubMenu);
+                if (sub == null) continue;
+                var subRuta = (sub.Ruta ?? "").Trim();
+                var codigoRuta = subRuta.TrimStart('/').ToUpperInvariant().Replace(" ", "");
+                if (string.IsNullOrEmpty(codigoRuta) && subRuta.ToUpperInvariant().Contains("PRINCIPAL"))
+                    codigoRuta = "PRINCIPAL";
+                var modDelSub = string.IsNullOrEmpty(codigoRuta) ? null : Estructura.Estructura.FirstOrDefault(m => (m.Codigo ?? "").ToUpperInvariant().Replace(" ", "") == codigoRuta);
+                if (modDelSub == null && subRuta.ToUpperInvariant().Contains("PRINCIPAL"))
+                    modDelSub = Estructura.Estructura.FirstOrDefault(m => (m.Codigo ?? "").ToUpperInvariant().Contains("INICIO") || (m.Nombre ?? "").ToUpperInvariant().Contains("INICIO"));
+                if (modDelSub != null)
+                    return Estructura.BotonesPorModulo.Where(b => b.IdModulo == modDelSub.IdModulo).Select(b => b.IdBoton).ToList();
+                return new List<int>();
+            }
+        }
+        return new List<int>();
+    }
+
+    private void ToggleBoton(int id, bool add)
+    {
+        if (add && !_botonIds.Contains(id)) _botonIds.Add(id);
+        if (!add) _botonIds.Remove(id);
+        StateHasChanged();
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            var ok = await GestionUsuarios.PutPermisosRolAsync(IdRol, new PermisosRolDto { SubMenuIds = _subMenuIds, BotonIds = _botonIds });
+            if (ok)
+            {
+                Notify.ShowSuccess("Permisos guardados. Los usuarios deberán recargar o volver a iniciar sesión para ver los cambios.");
+                await OnGuardado.InvokeAsync();
+            }
+            else
+                Notify.ShowError("Error al guardar.");
+        }
+        catch (Exception ex)
+        {
+            Notify.ShowError(ex.Message ?? "Error al guardar.");
+        }
+    }
+}

@@ -1,0 +1,28 @@
+@namespace IPRESS.Client.Components.Common
+@typeparam TValue
+@* Selector unificado: misma altura y estilo en todo el sistema. *@
+<RadzenDropDown TValue="TValue"
+                Value="@Value"
+                ValueChanged="@(async v => { await ValueChanged.InvokeAsync(v); await Change.InvokeAsync(); })"
+                Data="@Data"
+                TextProperty="@TextProperty"
+                ValueProperty="@ValueProperty"
+                Placeholder="@Placeholder"
+                Style="@InputStyle"
+                Class="@InputClass"
+                Disabled="@Disabled" />
+
+@code {
+    [Parameter] public TValue? Value { get; set; }
+    [Parameter] public EventCallback<TValue?> ValueChanged { get; set; }
+    [Parameter] public IEnumerable<object>? Data { get; set; }
+    [Parameter] public string? TextProperty { get; set; }
+    [Parameter] public string? ValueProperty { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public EventCallback Change { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    private string InputStyle => string.IsNullOrEmpty(Style) ? "width:100%" : "width:100%; " + Style;
+    private string InputClass => string.IsNullOrEmpty(Class) ? "ipress-input-equal" : "ipress-input-equal " + Class;
+}

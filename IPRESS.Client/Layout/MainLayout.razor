@@ -1,0 +1,157 @@
+@inherits LayoutComponentBase
+@using Radzen
+@using Radzen.Blazor
+@inject AuthService AuthService
+@inject PermisosService PermisosService
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthProvider
+@inject ILocalStorageService _localStorage
+@using Microsoft.AspNetCore.Components.Authorization
+@using Blazored.LocalStorage
+@using IPRESS.Client.Services
+@using IPRESS.Domain.Dtos
+@implements IDisposable
+
+<RadzenLayout Style="min-height:100vh">
+    <RadzenHeader Style="padding:0.25rem 0.5rem">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="0.5rem" Style="width:100%">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Style="flex:0 0 auto">
+                <RadzenSidebarToggle Click="@ToggleSidebar" />
+                <a href="/principal" class="rz-link" style="display:flex;align-items:center;gap:0.35rem;font-weight:600;color:var(--rz-primary);text-decoration:none;font-size:1.05rem;">
+                    <span style="width:24px;height:24px;background:var(--rz-primary);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:12px;">IP</span>
+                    IPRESS
+                </a>
+            </RadzenStack>
+            <div style="flex:1;display:flex;justify-content:center;align-items:center;min-width:0">
+                <span style="font-weight:600;font-size:1rem;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">@tituloPagina</span>
+            </div>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center" Style="flex:0 0 auto">
+                <div style="display:flex;align-items:center;gap:0.5rem;padding:4px 8px;background:var(--rz-base-100);border-radius:2px;border:1px solid var(--rz-base-300)">
+                    <div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:var(--rz-primary);color:white;font-size:10px;font-weight:600">@inicialesUsuario</div>
+                    <span class="rz-body-small" style="max-width:120px;overflow:hidden;text-overflow:ellipsis">@nombreUsuario</span>
+                </div>
+                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="logout" Click="@Logout" Text="Salir" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenHeader>
+    <RadzenSidebar @bind-Expanded="@sidebarExpanded" Breakpoint="Breakpoint.Medium">
+        <RadzenPanelMenu style="flex:1">
+            @if (Accesos != null && Accesos.Modulos.Any())
+            {
+                foreach (var modulo in Accesos.Modulos)
+                {
+                    foreach (var menu in modulo.Menus)
+                    {
+                        <RadzenPanelMenuItem Text="@menu.NombreMenu" Icon="folder" AllowCollapse="true">
+                            @foreach (var sub in menu.SubMenus)
+                            {
+                                <RadzenPanelMenuItem Text="@sub.NombreSubMenu" Path="@sub.Ruta" Icon="@GetMenuIcon(sub.Ruta)" />
+                            }
+                        </RadzenPanelMenuItem>
+                    }
+                }
+            }
+            else if (Accesos != null && !Accesos.Modulos.Any())
+            {
+                <RadzenPanelMenuItem Text="Inicio" Path="/principal" Icon="home" />
+            }
+            else
+            {
+                <RadzenStack Gap="0.5rem" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="padding:2rem">
+                    <RadzenProgressBarCircular ShowValue="false" Size="ProgressBarCircularSize.Small" Mode="ProgressBarMode.Indeterminate" />
+                    <span class="rz-body-small">Cargando...</span>
+                </RadzenStack>
+            }
+        </RadzenPanelMenu>
+    </RadzenSidebar>
+    <RadzenBody Style="padding:0.5rem;overflow:auto">
+        @Body
+    </RadzenBody>
+</RadzenLayout>
+<RadzenComponents />
+
+@code {
+    private AccesosResponse? Accesos;
+    private bool sidebarExpanded = true;
+    private string nombreUsuario = "Usuario";
+    private string inicialesUsuario = "U";
+    private string tituloPagina = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            nombreUsuario = user.Identity?.Name ?? "Usuario";
+            inicialesUsuario = GenerarIniciales(nombreUsuario);
+            var accesos = await AuthService.GetAccesosAsync();
+            Accesos = accesos;
+        }
+        catch { }
+        ActualizarTitulo();
+    }
+
+    private void ActualizarTitulo()
+    {
+        var path = NavManager.Uri.Replace(NavManager.BaseUri, "").TrimStart('/').Split('?')[0].ToLowerInvariant();
+        if (string.IsNullOrEmpty(path) || path == "principal") tituloPagina = "Inicio";
+        else if (path.StartsWith("diresas")) tituloPagina = "Diresas";
+        else if (path.StartsWith("red")) tituloPagina = "Red";
+        else if (path.StartsWith("microred")) tituloPagina = "MicroRed";
+        else if (path.StartsWith("establecimientos")) tituloPagina = "Establecimiento de Salud";
+        else if (path.StartsWith("centros-poblados")) tituloPagina = "Centros Poblados";
+        else if (path.StartsWith("usuarios")) tituloPagina = "Usuarios";
+        else if (path.StartsWith("roles")) tituloPagina = "Roles";
+        else tituloPagina = path;
+    }
+
+    protected override void OnInitialized()
+    {
+        NavManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        ActualizarTitulo();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleSidebar() => sidebarExpanded = !sidebarExpanded;
+
+    private async Task Logout()
+    {
+        PermisosService.Limpiar();
+        await _localStorage.RemoveItemAsync("authToken");
+        ((CustomAuthStateProvider)AuthProvider).NotifyUserLogout();
+        NavManager.NavigateTo("/login", forceLoad: true);
+    }
+
+    private string GenerarIniciales(string nombre)
+    {
+        if (string.IsNullOrWhiteSpace(nombre)) return "U";
+        var partes = nombre.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (partes.Length == 0) return "U";
+        if (partes.Length == 1) return partes[0].Substring(0, Math.Min(2, partes[0].Length)).ToUpper();
+        return (partes[0][0].ToString() + partes[1][0].ToString()).ToUpper();
+    }
+
+    private string GetMenuIcon(string ruta)
+    {
+        var rutaLower = ruta.ToLower();
+        if (rutaLower == "/principal") return "home";
+        if (rutaLower.Contains("diresas")) return "place";
+        if (rutaLower.Contains("red")) return "account_tree";
+        if (rutaLower.Contains("microred")) return "hub";
+        if (rutaLower.Contains("establecimientos")) return "business";
+        if (rutaLower.Contains("centros-poblados")) return "place";
+        if (rutaLower.Contains("usuarios")) return "people";
+        if (rutaLower.Contains("dashboard")) return "dashboard";
+        return "description";
+    }
+
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= OnLocationChanged;
+    }
+}

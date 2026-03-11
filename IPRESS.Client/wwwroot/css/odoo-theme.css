@@ -1,0 +1,138 @@
+/* Tema inspirado en Odoo - IPRESS */
+:root {
+    --odoo-primary: #714B67;
+    --odoo-primary-hover: #5a3c52;
+    --odoo-bg: #f8f9fa;
+    --odoo-sidebar-bg: #fff;
+    --odoo-header-bg: #fff;
+    --odoo-border: #e9ecef;
+    --odoo-text: #212529;
+    --odoo-text-muted: #6c757d;
+    --odoo-accent: #17a2b8;
+}
+
+/* Contenedor principal estilo Odoo */
+.odoo-layout {
+    background: var(--odoo-bg) !important;
+}
+
+/* Header limpio tipo Odoo */
+.odoo-header {
+    background: var(--odoo-header-bg) !important;
+    border-bottom: 1px solid var(--odoo-border);
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    color: var(--odoo-text);
+}
+
+.odoo-header .odoo-user-badge {
+    background: var(--odoo-bg);
+    color: var(--odoo-text);
+    border: 1px solid var(--odoo-border);
+}
+
+/* Sidebar tipo Odoo */
+.odoo-sidebar {
+    background: var(--odoo-sidebar-bg) !important;
+    border-right: 1px solid var(--odoo-border);
+    box-shadow: none;
+}
+
+.odoo-sidebar .odoo-nav-item:hover {
+    background: rgba(113, 75, 103, 0.08);
+    color: var(--odoo-primary);
+}
+
+.odoo-sidebar .odoo-nav-item.active {
+    background: rgba(113, 75, 103, 0.12);
+    color: var(--odoo-primary);
+    border-left-color: var(--odoo-primary);
+}
+
+/* Breadcrumbs estilo Odoo */
+.odoo-breadcrumb {
+    font-size: 0.8125rem;
+    color: var(--odoo-text-muted);
+}
+
+.odoo-breadcrumb a {
+    color: var(--odoo-primary);
+}
+
+.odoo-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+/* Tablas estilo Odoo */
+.odoo-table {
+    background: #fff;
+    border: 1px solid var(--odoo-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.odoo-table thead {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--odoo-text-muted);
+}
+
+.odoo-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* Botones estilo Odoo */
+.odoo-btn-primary {
+    background: var(--odoo-primary);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+}
+
+.odoo-btn-primary:hover {
+    background: var(--odoo-primary-hover);
+    color: #fff;
+}
+
+.odoo-btn-secondary {
+    background: #fff;
+    color: var(--odoo-text);
+    border: 1px solid var(--odoo-border);
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+}
+
+.odoo-btn-secondary:hover {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+/* Botón cerrar sesión */
+.odoo-logout-btn {
+    background: #714B67;
+}
+
+.odoo-logout-btn:hover {
+    background: #5a3c52;
+}
+
+/* Tablas en páginas tipo Odoo */
+.odoo-page-card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.odoo-page-card .odoo-breadcrumb a {
+    color: #714B67;
+}
+
+.odoo-btn-primary {
+    background: #714B67 !important;
+}

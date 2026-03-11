@@ -1,0 +1,12 @@
+@page "/principal"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@layout MainLayout
+@using Radzen
+@using Radzen.Blazor
+
+<RadzenCard>
+    <RadzenStack Gap="0.5rem">
+        <RadzenText TextStyle="TextStyle.H4">Bienvenido a IPRESS</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" Style="color:var(--rz-base-500)">Seleccione una opción del menú para comenzar.</RadzenText>
+    </RadzenStack>
+</RadzenCard>

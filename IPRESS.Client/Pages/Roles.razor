@@ -1,0 +1,178 @@
+@page "/roles"
+@attribute [Authorize]
+@layout MainLayout
+@using Radzen
+@using Radzen.Blazor
+@inject GestionUsuariosService GestionUsuarios
+@inject NotificationService Notify
+@inject PermisosService Permisos
+@inject DialogService DialogService
+
+<RadzenStack Gap="0.75rem" Style="height:100%;overflow:auto;display:flex;flex-direction:column;">
+    <RadzenCard Style="padding:0.5rem;flex-shrink:0">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+            <RadzenBreadcrumb>
+                <RadzenBreadcrumbItem Text="Inicio" Path="/principal" />
+                <RadzenBreadcrumbItem Text="Gestión de roles" />
+            </RadzenBreadcrumb>
+            @if (Permisos.TienePermiso("/roles", "CREAR"))
+            {
+                <RadzenButton Icon="add" Text="Nuevo rol" ButtonStyle="ButtonStyle.Primary" Click="@AbrirNuevoRol" />
+            }
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenRow Gap="1rem" Style="flex:1;min-height:0;align-items:stretch;">
+        <RadzenColumn Size="12" SizeMD="5" SizeLG="4">
+            <RadzenFieldSet Text="Roles" Icon="security">
+                <RadzenText TextStyle="TextStyle.Body2">Haga clic en «Editar permisos» para configurar menús y acciones del rol en el panel de la derecha.</RadzenText>
+                <IpressDataTable TItem="RolDto" Data="@roles" Style="min-height:200px" EmptyText="No hay roles.">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="RolDto" Property="Codigo" Title="Código" Width="120px" />
+                        <RadzenDataGridColumn TItem="RolDto" Property="Nombre" Title="Nombre" />
+                        @if (Permisos.TienePermiso("/roles", "EDITAR") || Permisos.TienePermiso("/roles", "ELIMINAR"))
+                        {
+                            <RadzenDataGridColumn TItem="RolDto" Title="Acciones" Sortable="false" Filterable="false" Width="220px">
+                                <Template Context="r">
+                                    @if (Permisos.TienePermiso("/roles", "EDITAR"))
+                                    {
+                                        <RadzenButton Icon="edit" Text="Datos" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => EditarRol(r))" Title="Editar código y nombre" />
+                                        <RadzenButton Icon="security" Text="Permisos" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => SeleccionarRol(r))" Title="Editar permisos" />
+                                    }
+                                    @if (Permisos.TienePermiso("/roles", "ELIMINAR"))
+                                    {
+                                        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => EliminarRol(r))" Title="Eliminar" />
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        }
+                    </Columns>
+                </IpressDataTable>
+            </RadzenFieldSet>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="7" SizeLG="8" Style="display:flex;flex-direction:column;min-height:0;">
+            @if (selectedRol != null)
+            {
+                <div style="display:flex;flex-direction:column;flex:1;min-height:0;">
+                    <div style="font-size:1.1rem;font-weight:600;margin-bottom:0.5rem;padding:0.25rem 0;color:var(--rz-primary);">
+                        Rol seleccionado: @selectedRol.Nombre
+                    </div>
+                    <RadzenFieldSet Text="Menús y funcionalidades" Icon="edit_note" Style="flex:1;display:flex;flex-direction:column;min-height:0;">
+                        <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
+                        @if (estructura != null && permisosActuales != null)
+                        {
+                            <PermisosRolPanel @key="selectedRol.IdRol" IdRol="selectedRol.IdRol" Estructura="estructura" Permisos="permisosActuales" GestionUsuarios="GestionUsuarios" OnGuardado="OnPermisosGuardados" />
+                        }
+                        else if (cargandoPermisos)
+                        {
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Style="margin:1rem" />
+                        }
+                        else
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2">No se pudo cargar la estructura o los permisos.</RadzenText>
+                        }
+                        </div>
+                    </RadzenFieldSet>
+                </div>
+            }
+            else
+            {
+                <RadzenFieldSet Text="Permisos del rol" Icon="edit_note">
+                    <RadzenText TextStyle="TextStyle.Body2">Seleccione un rol de la lista y haga clic en «Editar permisos» para configurar qué menús y botones tiene ese rol.</RadzenText>
+                </RadzenFieldSet>
+            }
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+    private List<RolDto> roles = new();
+    private RolDto? selectedRol;
+    private EstructuraPermisosDto? estructura;
+    private PermisosRolDto? permisosActuales;
+    private bool cargandoPermisos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarRoles();
+        estructura = await GestionUsuarios.GetEstructuraAsync();
+    }
+
+    private async Task CargarRoles()
+    {
+        try
+        {
+            roles = await GestionUsuarios.GetRolesAsync();
+        }
+        catch (Exception ex)
+        {
+            Notify.ShowError(ex.Message?.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) == true ? "No se pudo conectar con el servidor." : "Error al cargar datos.");
+        }
+    }
+
+    private async Task SeleccionarRol(RolDto rol)
+    {
+        selectedRol = rol;
+        cargandoPermisos = true;
+        permisosActuales = null;
+        StateHasChanged();
+        try
+        {
+            permisosActuales = await GestionUsuarios.GetPermisosRolAsync(rol.IdRol);
+        }
+        catch (Exception ex)
+        {
+            Notify.ShowError(ex.Message ?? "Error al cargar permisos.");
+        }
+        finally
+        {
+            cargandoPermisos = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnPermisosGuardados()
+    {
+        await CargarRoles();
+        if (selectedRol != null)
+        {
+            try
+            {
+                permisosActuales = await GestionUsuarios.GetPermisosRolAsync(selectedRol.IdRol);
+                StateHasChanged();
+            }
+            catch { /* ya se guardó; si falla el refetch no bloqueamos */ }
+        }
+    }
+
+    private async Task AbrirNuevoRol()
+    {
+        var result = await DialogService.OpenAsync<RolFormDialog>("Nuevo rol", new Dictionary<string, object?> { ["GestionUsuarios"] = GestionUsuarios }, new DialogOptions { Width = "400px" });
+        if (result is true) await CargarRoles();
+    }
+
+    private async Task EditarRol(RolDto r)
+    {
+        var result = await DialogService.OpenAsync<RolFormDialog>("Editar rol", new Dictionary<string, object?> { ["Rol"] = r, ["GestionUsuarios"] = GestionUsuarios }, new DialogOptions { Width = "400px" });
+        if (result is true)
+        {
+            await CargarRoles();
+            if (selectedRol?.IdRol == r.IdRol)
+            {
+                selectedRol = roles.FirstOrDefault(x => x.IdRol == r.IdRol);
+                if (selectedRol != null)
+                    permisosActuales = await GestionUsuarios.GetPermisosRolAsync(selectedRol.IdRol);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task EliminarRol(RolDto r)
+    {
+        if (await DialogService.Confirm("¿Eliminar el rol \"" + r.Nombre + "\"?", "Eliminar rol", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar" }) != true)
+            return;
+        var (ok, msg) = await GestionUsuarios.DeleteRolAsync(r.IdRol);
+        if (ok) { Notify.ShowSuccess("Rol eliminado."); if (selectedRol?.IdRol == r.IdRol) selectedRol = null; await CargarRoles(); StateHasChanged(); }
+        else Notify.ShowError(msg ?? "Error al eliminar.");
+    }
+}

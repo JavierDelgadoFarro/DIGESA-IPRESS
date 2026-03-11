@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IPRESS</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="IPRESS.Client.styles.css" rel="stylesheet" />
+    <!-- Fuente de iconos para cabeceras del DataGrid (evita que se muestre "m" en lugar del icono) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/software-base.css" />
+    <link rel="stylesheet" href="css/ipress-theme.css" />
+</head>
+<body>
+
+    <div id="app">
+        <div class="loading-wrapper">
+            <div class="loading-box">
+                <div class="loading-logo">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                </div>
+                <h1 class="loading-title">IPRESS</h1>
+                <div class="loading-spinner">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <p class="loading-text">Cargando aplicación...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" class="hidden">
+        <div class="error-container">
+            <div class="error-content">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                <span>Ha ocurrido un error inesperado.</span>
+            </div>
+            <div class="error-actions">
+                <a href="" class="underline">Recargar</a>
+                <a class="dismiss">✕</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+    <script>
+        // En producción no exponer datos sensibles por consola
+        (function () {
+            var isProd = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+            if (isProd) {
+                console.log = function () {};
+                console.info = function () {};
+                console.debug = function () {};
+            }
+        })();
+        // Función para descargar archivos desde base64
+        window.downloadFileFromBase64 = function (fileName, base64Content) {
+            const linkSource = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64Content}`;
+            const downloadLink = document.createElement("a");
+            downloadLink.href = linkSource;
+            downloadLink.download = fileName;
+            downloadLink.click();
+        };
+        // Traducir textos del paginador Radzen al español (Registros por página, etc.)
+        function ipressPagerEspanol() {
+            document.querySelectorAll('.rz-paginator').forEach(function (el) {
+                walk(el);
+            });
+            function walk(node) {
+                if (node.nodeType === 3 && node.textContent) {
+                    var t = node.textContent.replace(/items\s+per\s+page/gi, 'Registros por página');
+                    if (t !== node.textContent) node.textContent = t;
+                    return;
+                }
+                if (node.nodeType === 1) {
+                    if (node.childNodes.length === 0 && node.innerText) {
+                        var s = node.innerText.replace(/items\s+per\s+page/gi, 'Registros por página');
+                        if (s !== node.innerText) node.innerText = s;
+                    } else
+                        node.childNodes.forEach(walk);
+                }
+            }
+        }
+        var mo = new MutationObserver(function () { ipressPagerEspanol(); });
+        document.addEventListener('DOMContentLoaded', function () {
+            ipressPagerEspanol();
+            mo.observe(document.body, { childList: true, subtree: true });
+        });
+    </script>
+
+    <style>
+        html, body { height: 100%; margin: 0; font-family: Arial, Calibri, 'Segoe UI', sans-serif; }
+        #app { height: 100%; }
+        input[type="file"] { padding: 0.5rem; border: 1px dashed var(--rz-base-400); border-radius: 4px; width: 100%; }
+    </style>
+</body>
+
+</html>

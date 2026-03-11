@@ -1,0 +1,22 @@
+@namespace IPRESS.Client.Components.Common
+@* Input de texto unificado: misma altura y estilo en todo el sistema. *@
+<RadzenTextBox @bind-Value="Value"
+              Placeholder="@Placeholder"
+              ReadOnly="@ReadOnly"
+              MaxLength="@MaxLength"
+              Style="@InputStyle"
+              Class="@InputClass"
+              Disabled="@Disabled" />
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public int? MaxLength { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    private string InputStyle => string.IsNullOrEmpty(Style) ? "width:100%" : "width:100%; " + Style;
+    private string InputClass => string.IsNullOrEmpty(Class) ? "ipress-input-equal" : "ipress-input-equal " + Class;
+}

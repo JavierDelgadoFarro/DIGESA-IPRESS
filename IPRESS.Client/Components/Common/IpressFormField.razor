@@ -1,0 +1,16 @@
+@namespace IPRESS.Client.Components.Common
+@* Campo de formulario unificado: mismo estilo que Establecimiento/Red en todo el sistema. *@
+<RadzenFormField Text="@Text"
+                 Variant="Variant.Outlined"
+                 AllowFloatingLabel="false"
+                 Class="@Class"
+                 Style="@Style">
+    @ChildContent
+</RadzenFormField>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,114 @@
+@namespace IPRESS.Client.Components
+@using Radzen
+@using Radzen.Blazor
+@inject MaestrosService Maestros
+@inject NotificationService Notify
+@inject DialogService DialogService
+
+<EditForm Model="@Form" OnValidSubmit="@Guardar">
+    <RadzenStack Gap="1rem">
+        <RadzenFormField Text="Código" Variant="Variant.Outlined">
+            <RadzenTextBox @bind-Value="@CodigoTexto" Style="width:100%" Placeholder="" MaxLength="10" />
+        </RadzenFormField>
+        <RadzenFormField Text="Diresa" Variant="Variant.Outlined">
+            <RadzenTextBox @bind-Value="@Form.Nombre" Style="width:100%" />
+        </RadzenFormField>
+        <RadzenFormField Text="Departamento (opcional)" Variant="Variant.Outlined">
+            <RadzenDropDown Data="@departamentosConOpcion" TextProperty="Nombre" ValueProperty="Codigo" @bind-Value="@codigoDepartamento" Style="width:100%" Change="@OnDepartamentoChange" />
+        </RadzenFormField>
+        <RadzenFormField Text="Provincia (opcional)" Variant="Variant.Outlined">
+            <RadzenDropDown Data="@provinciasConOpcion" TextProperty="Nombre" ValueProperty="Codigo" @bind-Value="@codigoProvincia" Style="width:100%" Change="@OnProvinciaChange" />
+        </RadzenFormField>
+        <RadzenFormField Text="Distrito (opcional)" Variant="Variant.Outlined">
+            <RadzenDropDown Data="@distritosConOpcion" TextProperty="Nombre" ValueProperty="Ubigeo" @bind-Value="@Form.Ubigeo" Style="width:100%" />
+        </RadzenFormField>
+        <RadzenFormField Text="Ubigeo (solo lectura)" Variant="Variant.Outlined">
+            <RadzenTextBox Value="@Form.Ubigeo" Style="width:100%" ReadOnly="true" />
+        </RadzenFormField>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton ButtonType="ButtonType.Button" Text="Cancelar" ButtonStyle="ButtonStyle.Light" Click="@Cancel" />
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Guardar" Icon="save" />
+        </RadzenStack>
+    </RadzenStack>
+</EditForm>
+
+@code {
+    [Parameter] public DiresaDto Form { get; set; } = new();
+    [Parameter] public List<DiresaDto> Diresas { get; set; } = new();
+
+    private List<GeografiaItemDto> departamentos = new();
+    private List<ProvinciaItemDto> provincias = new();
+    private List<DistritoItemDto> distritos = new();
+    private IEnumerable<GeografiaItemDto> departamentosConOpcion => new[] { new GeografiaItemDto { Codigo = "", Nombre = "--seleccionar--" } }.Concat(departamentos);
+    private IEnumerable<ProvinciaItemDto> provinciasConOpcion => new[] { new ProvinciaItemDto { Codigo = "", Nombre = "--seleccionar--" } }.Concat(provincias);
+    private IEnumerable<DistritoItemDto> distritosConOpcion => new[] { new DistritoItemDto { Ubigeo = "", Nombre = "--seleccionar--" } }.Concat(distritos);
+    private string? codigoDepartamento;
+    private string? codigoProvincia;
+    private string _codigoTexto = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        departamentos = await Maestros.GetDepartamentosAsync() ?? new();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _codigoTexto = Form.IdDiresa > 0 ? Form.Codigo.ToString() : "";
+        // Al editar: restaurar Departamento, Provincia y Distrito desde Ubigeo almacenado (2, 4 o 6 caracteres)
+        if (Form.IdDiresa > 0 && !string.IsNullOrEmpty(Form.Ubigeo))
+        {
+            if (Form.Ubigeo.Length >= 2)
+                codigoDepartamento = Form.Ubigeo.Substring(0, 2);
+            if (Form.Ubigeo.Length >= 4)
+                codigoProvincia = Form.Ubigeo.Substring(0, 4);
+            // Cargar listas para que los dropdowns muestren la selección actual
+            if (!string.IsNullOrEmpty(codigoDepartamento))
+                provincias = await Maestros.GetProvinciasAsync(codigoDepartamento) ?? new();
+            if (!string.IsNullOrEmpty(codigoProvincia))
+                distritos = await Maestros.GetDistritosAsync(codigoProvincia) ?? new();
+        }
+    }
+
+    private string CodigoTexto
+    {
+        get => _codigoTexto;
+        set => _codigoTexto = value ?? "";
+    }
+
+    private async Task OnDepartamentoChange()
+    {
+        codigoProvincia = null;
+        Form.Ubigeo = null;
+        provincias = string.IsNullOrEmpty(codigoDepartamento) ? new() : (await Maestros.GetProvinciasAsync(codigoDepartamento) ?? new());
+        distritos = new();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnProvinciaChange()
+    {
+        Form.Ubigeo = null;
+        distritos = string.IsNullOrEmpty(codigoProvincia) ? new() : (await Maestros.GetDistritosAsync(codigoProvincia) ?? new());
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Guardar()
+    {
+        if (!int.TryParse(_codigoTexto?.Trim(), out var codigo))
+        {
+            Notify.ShowError("El código debe ser numérico.");
+            return;
+        }
+        Form.Codigo = codigo;
+        // Ubigeo: 6 caracteres si hay distrito; si solo prov/dep, enviar código 4 o 2 caracteres
+        Form.Ubigeo = (!string.IsNullOrEmpty(Form.Ubigeo) && Form.Ubigeo.Length == 6) ? Form.Ubigeo
+            : (!string.IsNullOrEmpty(codigoProvincia) ? codigoProvincia : (!string.IsNullOrEmpty(codigoDepartamento) ? codigoDepartamento : null));
+        if (string.IsNullOrEmpty(Form.Ubigeo)) Form.Ubigeo = null;
+        var ok = Form.IdDiresa > 0
+            ? await Maestros.PutDiresaAsync(Form.IdDiresa, Form)
+            : await Maestros.PostDiresaAsync(Form);
+        if (ok) { Notify.ShowSuccess("Guardado correctamente."); DialogService.Close(true); }
+        else Notify.ShowError("Error al guardar.");
+    }
+
+    private void Cancel() => DialogService.Close(false);
+}

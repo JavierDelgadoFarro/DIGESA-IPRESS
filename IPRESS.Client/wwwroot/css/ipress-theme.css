@@ -1,0 +1,653 @@
+/* Tema IPRESS: primario y acentos en azul/celeste (sin verde) */
+/* Fuente global un poco más pequeña para aprovechar mejor la vista y listar más registros */
+:root {
+  --rz-primary: #0ea5e9;
+  --rz-primary-contrast: #ffffff;
+  --rz-primary-dark: #0284c7;
+  --rz-primary-light: #38bdf8;
+  --rz-secondary: #0c4a6e;
+  --rz-success: #0ea5e9;
+  --rz-info: #38bdf8;
+  font-family: Arial, Calibri, 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+html, body {
+  font-family: Arial, Calibri, 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
+/* ========== ESTILO GLOBAL: todos los inputs igual altura (32px) en todo el sistema ========== */
+/* Aplica a formularios de Red, Diresa, MicroRed, Establecimiento, Centro Poblado, Usuarios, Login, etc. */
+.rz-inputtext,
+.rz-dropdown,
+.rz-numeric .rz-inputtext,
+.rz-autocomplete .rz-inputtext,
+.rz-textbox input,
+.rz-textbox .rz-inputtext {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  line-height: 1.25;
+}
+.rz-dropdown,
+.rz-numeric.rz-component,
+.rz-textbox {
+  min-height: 32px;
+  box-sizing: border-box;
+}
+.rz-textbox.rz-component,
+.rz-form-field .rz-textbox,
+.rz-form-field .rz-dropdown,
+.rz-form-field .rz-numeric {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+.rz-form-field .rz-textbox input,
+.rz-form-field .rz-textbox .rz-inputtext,
+.rz-form-field .rz-numeric .rz-inputtext,
+.rz-form-field input.rz-inputtext {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0.25rem 0.5rem;
+  box-sizing: border-box;
+}
+.ipress-input.rz-inputtext,
+.ipress-input .rz-inputtext,
+.rz-numeric.ipress-input .rz-inputtext,
+.rz-dropdown.ipress-input {
+  height: 32px !important;
+  min-height: 32px !important;
+  box-sizing: border-box;
+}
+
+/* Inputs alfanuméricos (Código, Nombre, Banda, Ubigeo) mismo tamaño que selectores y numéricos */
+.ipress-input-equal.rz-textbox input,
+.ipress-input-equal.rz-inputtext,
+.ipress-input-equal input.rz-inputtext,
+.rz-textbox.ipress-input-equal input,
+.rz-form-field .ipress-input-equal.rz-inputtext,
+.rz-form-field .rz-textbox.ipress-input-equal input {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+.rz-textbox.ipress-input-equal,
+.ipress-input-equal.rz-textbox {
+  display: block;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+
+/* Secciones del formulario: solo contorno (borde), sin fondo. Título visible en cada sección. */
+.ipress-fieldset-section .ipress-section-content {
+  background: transparent !important;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin-top: 0.5rem;
+  border: 1px solid #cbd5e1;
+}
+.ipress-fieldset-section .ipress-section-content.ipress-section-coords {
+  background: transparent !important;
+  border-color: #cbd5e1;
+}
+/* Título de la sección visible (dentro del contenido) */
+.ipress-section-title {
+  display: block !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: #000 !important;
+  margin-bottom: 0.5rem !important;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+/* Título del FieldSet (legend) por si Radzen lo muestra */
+.ipress-fieldset-section .rz-fieldset-legend,
+.ipress-fieldset-section .rz-fieldset-legend .rz-text,
+.ipress-fieldset-section legend {
+  display: block !important;
+  visibility: visible !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  color: #000 !important;
+  margin-bottom: 0.35rem !important;
+}
+
+/* Casillero: cuadrado a la izquierda, texto (pregunta) a la derecha - texto siempre visible */
+.ipress-casillero {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0.25rem 0;
+  gap: 0.5rem;
+}
+.ipress-casillero .rz-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+.ipress-casillero .rz-checkbox-box {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-right: 0;
+}
+/* Asegurar que el texto del checkbox sea visible (Radzen a veces lo oculta) */
+.ipress-casillero .rz-checkbox-label,
+.ipress-casillero label,
+.ipress-casillero .rz-checkbox span:not(.rz-checkbox-box),
+.ipress-casillero .ipress-casillero-text {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-size: 0.9rem !important;
+  color: #000 !important;
+  margin-left: 0.25rem;
+}
+
+/* Misma altura para todos (selectores, numéricos, texto) en formulario establecimiento */
+.ipress-section-content .rz-inputtext,
+.ipress-section-content .rz-dropdown,
+.ipress-section-content .rz-numeric .rz-inputtext,
+.ipress-section-content .rz-textbox input,
+.ipress-section-content .rz-textbox,
+.ipress-section-content .rz-dropdown.ipress-input-equal,
+.ipress-section-content .rz-numeric.ipress-input-equal .rz-inputtext,
+.ipress-section-content .rz-textbox.ipress-input-equal input,
+.ipress-section-content .rz-form-field .rz-textbox,
+.ipress-section-content .rz-form-field .rz-dropdown,
+.ipress-section-content .rz-form-field .rz-numeric {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  box-sizing: border-box;
+}
+.ipress-section-content .rz-form-field .rz-textbox input,
+.ipress-section-content .rz-form-field .rz-numeric .rz-inputtext {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+}
+.ipress-section-content .rz-dropdown,
+.ipress-section-content .rz-numeric.rz-component {
+  min-height: 32px;
+}
+
+/* Etiquetas de RadzenFormField como en login (texto arriba del input), color negro */
+.rz-form-field-label,
+.ipress-form-header .rz-text,
+.rz-fieldset-legend {
+  color: #000 !important;
+}
+.rz-form-field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+.rz-form-field {
+  margin-bottom: 0.45rem;
+}
+
+/* Checkboxes más compactos */
+.rz-checkbox-box {
+  width: 14px;
+  height: 14px;
+}
+
+.rz-checkbox-label {
+  font-size: 0.85rem;
+}
+
+.rz-checkbox {
+  margin-right: 0.5rem;
+}
+
+/* Fila compacta de casilleros (ej. ¿Tiene teléfono? / ¿Tiene radio?) */
+.ipress-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 1rem;
+  padding: 0.25rem 0;
+  min-height: 1.75rem;
+}
+.ipress-check-row .ipress-check-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--rz-text-color, #374151);
+  margin-right: 0.5rem;
+}
+.ipress-check-row .rz-checkbox {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+/* Iconos Radzen: forzar fuente de iconos para que no se vea "arrow_drop_up", "sort", "array", etc. */
+.rz-datatable .rz-icon,
+.rz-datatable [class*="rz-icon"],
+.rz-filter-menu .rz-icon,
+.rz-filter-menu [class*="rz-icon"],
+.rz-datatable .rz-sort-icon,
+.rz-datatable .rz-dropdown .rz-icon,
+.rz-dropdown-panel .rz-icon,
+.rz-datatable i.rz-icon,
+.rz-filter-menu i.rz-icon {
+  font-family: var(--rz-icon-font-family), 'Material Icons', 'Material Symbols Outlined', sans-serif !important;
+  font-style: normal !important;
+  font-weight: normal !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  overflow: hidden !important;
+  max-width: 1.5em !important;
+  min-width: 1em !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  text-indent: 0 !important;
+}
+
+/* Notificaciones y estados de éxito en azul/celeste */
+.rz-notification-success,
+.rz-alert-success {
+  --rz-success: #0ea5e9;
+}
+
+/* Menú de filtros del DataGrid: acentos en azul en lugar de verde/teal */
+.rz-datatable .rz-dropdown-panel .rz-state-active,
+.rz-datatable .rz-dropdown-item.rz-state-active,
+.rz-filter-menu .rz-state-active,
+.rz-dropdown-item.rz-state-active,
+.rz-listbox-item.rz-state-active {
+  background-color: #0ea5e9 !important;
+  color: #fff !important;
+  border-color: #0284c7 !important;
+}
+.rz-datatable .rz-dropdown:hover,
+.rz-filter-menu .rz-dropdown:hover,
+.rz-datatable .rz-column-title .rz-state-active {
+  border-color: #0ea5e9 !important;
+  color: #0284c7 !important;
+}
+.rz-datatable .rz-filter-operator,
+.rz-datatable .rz-filter-row .rz-inputtext:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 1px #0ea5e9 !important;
+}
+
+/* Diálogo de filtro: como la imagen (título, condiciones, operador Y/O, Limpiar y Aplicar en español) */
+.rz-filter-menu,
+.rz-datatable .rz-dropdown-panel[class*="filter"],
+.rz-popup .rz-filter-menu {
+  min-width: 280px;
+  padding: 0.75rem 1rem;
+  font-family: Arial, Calibri, 'Segoe UI', sans-serif;
+}
+.rz-filter-menu .rz-dropdown-panel-header,
+.rz-filter-menu .rz-dialog-title,
+.rz-filter-menu .rz-title,
+.rz-filter-menu > div:first-child {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+  color: #212529;
+}
+.rz-filter-menu .rz-filter-row,
+.rz-filter-menu .rz-dropdown,
+.rz-filter-menu .rz-inputtext {
+  margin-bottom: 0.5rem;
+}
+.rz-filter-menu .rz-filter-operator {
+  width: 100%;
+  margin: 0.5rem 0;
+}
+.rz-filter-menu .rz-buttons,
+.rz-filter-menu .rz-dialog-actions,
+.rz-filter-menu .rz-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #dee2e6;
+}
+.rz-filter-menu .rz-button.rz-primary,
+.rz-filter-menu button[type="button"]:last-of-type:not(.rz-secondary) {
+  background-color: #0ea5e9 !important;
+  border-color: #0284c7 !important;
+  color: #fff !important;
+}
+.rz-filter-menu .rz-button.rz-primary:hover,
+.rz-filter-menu button[type="button"]:last-of-type:not(.rz-secondary):hover {
+  background-color: #0284c7 !important;
+  border-color: #0369a1 !important;
+}
+
+/* Evitar que el panel de agrupación del DataGrid se superponga a las cabeceras de columna */
+.rz-datatable .rz-datatable-group-panel {
+  min-height: 2rem;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0;
+  display: block;
+  box-sizing: border-box;
+}
+.rz-datatable .rz-datatable-thead {
+  position: relative;
+  z-index: 1;
+}
+
+/* Cabeceras: igual que la imagen [⋮ tres puntos] [Título] [icono ordenación] [icono filtro] */
+.rz-datatable .rz-datatable-thead th {
+  padding: 0.6rem 0.75rem !important;
+  min-height: 2.75rem;
+  vertical-align: middle !important;
+  white-space: nowrap;
+}
+.rz-datatable .rz-datatable-thead th .rz-header-cell {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex-wrap: nowrap !important;
+  min-width: 0;
+  width: 100%;
+}
+/* Título centrado entre menú e iconos, sin crecer de más */
+.rz-datatable .rz-datatable-thead th .rz-header-cell > *:first-child {
+  flex-shrink: 0;
+}
+.rz-datatable .rz-datatable-thead th .rz-column-title {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  flex-wrap: nowrap !important;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.rz-datatable .rz-datatable-thead th .rz-column-title > span:first-of-type,
+.rz-datatable .rz-datatable-thead th .rz-column-title .rz-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rz-datatable .rz-datatable-thead th .rz-sortable-column,
+.rz-datatable .rz-datatable-thead th a.rz-column-title {
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+}
+.rz-datatable .rz-datatable-thead th .rz-sort-icon,
+.rz-datatable .rz-datatable-thead th .rz-dropdown,
+.rz-datatable .rz-datatable-thead th .rz-cell-filter {
+  flex-shrink: 0;
+}
+/* Cualquier celda de cabecera: contenido en fila sin solapar */
+.rz-datatable thead th,
+.rz-datatable .rz-datatable-thead th {
+  line-height: 1.4;
+}
+.rz-datatable thead th > div:not(.rz-cell-filter) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex-wrap: nowrap !important;
+  min-width: 0;
+}
+.rz-datatable thead th > div:not(.rz-cell-filter) > span,
+.rz-datatable thead th > div:not(.rz-cell-filter) > a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tablas: aspecto limpio (título, menú columna, filtros a la derecha) */
+.rz-datatable .rz-datatable-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* IpressDataTable: columnas parejas y bien distribuidas */
+.ipress-datatable.rz-datatable .rz-datatable-table {
+  table-layout: fixed;
+}
+.ipress-datatable.rz-datatable .rz-datatable-thead th,
+.ipress-datatable.rz-datatable .rz-datatable-tbody td {
+  padding: 0.35rem 0.5rem;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.ipress-datatable.rz-datatable .rz-datatable-tbody td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+.rz-datatable .rz-datatable-thead th {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  font-weight: 600;
+  color: #212529;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9em;
+}
+.rz-datatable .rz-datatable-tbody td {
+  border: 1px solid #dee2e6;
+  padding: 0.35rem 0.5rem;
+  font-size: inherit;
+}
+.rz-datatable .rz-datatable-tbody tr:hover {
+  background: #f1f5f9;
+}
+/* ========== PAGINACIÓN (personalizable desde aquí) ==========
+   Tres zonas: resumen (izq) | números y botones centrados | selector (der).
+   Clases: .rz-paginator-summary, .rz-button, .rz-link, .rz-state-active, .rz-dropdown
+*/
+.rz-datatable .rz-paginator {
+  padding: 0.2rem 0.6rem 0.25rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem 0.6rem;
+  min-height: auto;
+  font-size: 0.8125rem;
+  visibility: visible !important;
+  opacity: 1 !important;
+  border-radius: 0 0 6px 6px;
+  margin-bottom: 0;
+  line-height: 1;
+}
+/* Resumen "Mostrando X a Y de Z" ocupa espacio a la izquierda para centrar el bloque central */
+.rz-datatable .rz-paginator > .rz-paginator-summary,
+.rz-datatable .rz-paginator > span:first-child {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-right: 0.5rem;
+}
+/* Zona derecha: espaciador para centrar botones; la etiqueta no debe superponer el dropdown */
+.rz-datatable .rz-paginator .rz-paginator-page-size-label,
+.rz-datatable .rz-paginator > span:last-child {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: 0.5rem;
+  padding-left: 0.35rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  white-space: nowrap;
+}
+/* Dropdown "Registros por página": un solo control visible, espacio a la derecha para la etiqueta */
+.rz-datatable .rz-paginator .rz-dropdown {
+  flex: 0 0 auto;
+  min-width: 3.25rem;
+  margin: 0;
+  margin-right: 0.25rem;
+}
+/* Contenedor página-size (Radzen): dropdown + etiqueta en línea, sin solapamiento */
+.rz-datatable .rz-paginator .rz-paginator-page-size {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: 0.5rem;
+  justify-content: flex-end;
+}
+.rz-datatable .rz-paginator .rz-paginator-page-size .rz-paginator-page-size-label {
+  flex: 0 0 auto;
+  margin-left: 0;
+  padding-left: 0;
+}
+/* Botones y números: sin espacio extra abajo, compactos */
+.rz-datatable .rz-paginator .rz-button,
+.rz-datatable .rz-paginator .rz-link,
+.rz-datatable .rz-paginator button {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.2rem 0.45rem;
+  height: auto;
+  line-height: 1.1;
+  min-height: 1.6rem;
+  min-width: 1.6rem;
+  margin: 0 1px;
+  border-radius: 5px;
+  border: 1px solid #94a3b8;
+  background: #fff;
+  color: #334155 !important;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+  vertical-align: middle;
+}
+.rz-datatable .rz-paginator .rz-button .rz-icon,
+.rz-datatable .rz-paginator .rz-button i,
+.rz-datatable .rz-paginator button .rz-icon {
+  color: #334155 !important;
+  opacity: 1 !important;
+}
+.rz-datatable .rz-paginator .rz-link:hover,
+.rz-datatable .rz-paginator .rz-button:hover:not(:disabled) {
+  background: #e2e8f0 !important;
+  border-color: #64748b !important;
+  color: #0f172a !important;
+}
+.rz-datatable .rz-paginator .rz-button:hover:not(:disabled) .rz-icon,
+.rz-datatable .rz-paginator .rz-button:hover:not(:disabled) i {
+  color: #0f172a !important;
+}
+.rz-datatable .rz-paginator .rz-button:disabled,
+.rz-datatable .rz-paginator .rz-button[disabled] {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  opacity: 0.85;
+}
+.rz-datatable .rz-paginator .rz-link.rz-paginator-element.rz-state-active {
+  background: #0ea5e9 !important;
+  color: #fff !important;
+  border-color: #0284c7 !important;
+  border-radius: 5px;
+}
+/* Selector único "Registros por página": compacto, sin altura extra ni solapamiento */
+.rz-datatable .rz-paginator .rz-dropdown,
+.rz-datatable .rz-paginator .rz-dropdown .rz-inputtext {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.2rem 0.35rem;
+  height: auto !important;
+  min-height: 1.6rem !important;
+  max-height: 1.6rem !important;
+  line-height: 1.1;
+  min-width: 3rem;
+  border-radius: 5px;
+  border: 1px solid #94a3b8;
+  background: #fff;
+  color: #334155;
+  box-sizing: border-box;
+}
+.rz-datatable .rz-paginator .rz-dropdown .rz-inputtext,
+.rz-datatable .rz-paginator .rz-dropdown {
+  min-height: 1.6rem !important;
+  max-height: 1.6rem !important;
+  height: auto !important;
+}
+.rz-datatable.rz-datatable-sm .rz-paginator,
+.rz-datatable .rz-paginator.rz-paginator-bottom {
+  display: flex !important;
+  padding-bottom: 0.2rem;
+}
+/* Quitar espacio sobrante debajo del paginador */
+.rz-datatable .rz-datatable-content + .rz-paginator,
+.rz-datatable .rz-paginator.rz-paginator-bottom {
+  margin-bottom: 0 !important;
+  padding-bottom: 0.25rem !important;
+}
+.rz-datatable .rz-paginator .rz-paginator-page-size-label,
+.rz-datatable .rz-paginator .rz-paginator-summary,
+.rz-datatable .rz-paginator span:first-of-type {
+  font-size: 0.8125rem;
+  color: #334155;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/* Evitar "m" en cabeceras: el menú de columna (tres puntos) usa un icono; si la fuente falla se ve "m". Forzar fuentes de iconos. */
+.rz-datatable .rz-datatable-thead th .rz-icon,
+.rz-datatable .rz-datatable-thead th [class*="rz-icon"],
+.rz-datatable .rz-datatable-thead th .rz-sort-icon,
+.rz-datatable .rz-datatable-thead th i.rz-icon,
+.rz-datatable .rz-datatable-thead th span.rz-icon {
+  font-family: 'Material Symbols Outlined', 'Material Icons', var(--rz-icon-font-family), sans-serif !important;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+/* Evitar que el menú de columna muestre "m" cuando la fuente no carga: usar pseudoelemento con glifo (tres puntos) */
+.rz-datatable .rz-datatable-thead th .rz-header-cell .rz-column-menu .rz-icon,
+.rz-datatable .rz-datatable-thead th .rz-column-menu .rz-icon,
+.rz-datatable .rz-datatable-thead th .rz-header-cell > div:first-child > .rz-icon {
+  font-style: normal;
+  font-size: 0 !important;
+  display: inline-block;
+  width: 1.25em;
+  height: 1.25em;
+  overflow: hidden;
+  vertical-align: middle;
+}
+.rz-datatable .rz-datatable-thead th .rz-header-cell .rz-column-menu .rz-icon::before,
+.rz-datatable .rz-datatable-thead th .rz-column-menu .rz-icon::before,
+.rz-datatable .rz-datatable-thead th .rz-header-cell > div:first-child > .rz-icon::before {
+  content: '\e5d4'; /* more_vert en Material Icons */
+  font-family: 'Material Icons', 'Material Symbols Outlined', sans-serif;
+  font-size: 1.25rem;
+  line-height: 1;
+  display: block;
+}
+/* Orden en cabecera: [menú] [título] [orden] [filtro] sin que el título lleve "m" delante */
+.rz-datatable .rz-datatable-thead th .rz-column-title {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.25rem;
+}
+.rz-datatable .rz-datatable-thead th a.rz-column-title {
+  text-transform: none;
+}
+/* Evitar que ningún pseudoelemento añada "m" u otro texto delante del título */
+.rz-datatable .rz-datatable-thead th a.rz-column-title::before,
+.rz-datatable .rz-datatable-thead th .rz-column-title::before {
+  content: none !important;
+  display: none !important;
+}
+.rz-datatable .rz-datatable-thead th .rz-column-title .rz-text {
+  flex: 0 1 auto;
+}

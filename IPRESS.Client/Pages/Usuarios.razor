@@ -1,0 +1,121 @@
+@page "/usuarios"
+@attribute [Authorize]
+@layout MainLayout
+@using Radzen
+@using Radzen.Blazor
+@inject GestionUsuariosService GestionUsuarios
+@inject MaestrosService Maestros
+@inject NotificationService Notify
+@inject PermisosService Permisos
+@inject DialogService DialogService
+
+<RadzenStack Gap="0.5rem" Style="height:100%">
+    <RadzenCard Style="padding:0.5rem;flex:1;display:flex;flex-direction:column;min-height:0">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+            <RadzenBreadcrumb>
+                <RadzenBreadcrumbItem Text="Inicio" Path="/principal" />
+                <RadzenBreadcrumbItem Text="Gestión de usuarios" />
+            </RadzenBreadcrumb>
+            @if (Permisos.TienePermiso("/usuarios", "CREAR"))
+            {
+                <RadzenButton Icon="add" Text="Nuevo usuario" ButtonStyle="ButtonStyle.Primary" Click="@AbrirNuevoUsuario" />
+            }
+        </RadzenStack>
+
+        <RadzenFieldSet Text="Usuarios" Icon="people" Style="margin-top:0.5rem;flex:1;min-height:0">
+            <RadzenText TextStyle="TextStyle.Body2">Lista de usuarios. Al hacer clic en Editar podrá asignar uno o más roles y la Diresa; los permisos obtenidos por los roles se muestran en la parte inferior.</RadzenText>
+            <IpressDataTable TItem="UsuarioListDto" Data="@usuarios" Style="flex:1" EmptyText="No hay usuarios.">
+                <Columns>
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Property="NombreUsuario" Title="Usuario" Width="120px" />
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Property="NombreCompleto" Title="Nombre completo" Width="180px" />
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Property="Email" Title="Email" Width="180px" />
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Property="DiresaNombre" Title="Diresa" Width="140px" />
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Property="RedNombre" Title="Red" Width="120px" />
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Property="MicroRedNombre" Title="MicroRed" Width="120px" />
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Property="EstablecimientoNombre" Title="Establecimiento" Width="160px" />
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Title="Activo" Width="70px">
+                        <Template Context="u">
+                            @(u.Activo ? "Sí" : "No")
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="UsuarioListDto" Title="Roles" Width="180px">
+                        <Template Context="u">
+                            @(string.Join(", ", roles.Where(r => u.Roles.Contains(r.IdRol)).Select(r => r.Nombre)))
+                        </Template>
+                    </RadzenDataGridColumn>
+                    @if (Permisos.TienePermiso("/usuarios", "EDITAR") || Permisos.TienePermiso("/usuarios", "ELIMINAR"))
+                    {
+                        <RadzenDataGridColumn TItem="UsuarioListDto" Title="Acciones" Sortable="false" Filterable="false" Width="120px">
+                            <Template Context="u">
+                                @if (Permisos.TienePermiso("/usuarios", "EDITAR"))
+                                {
+                                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => EditarUsuario(u))" Title="Editar" />
+                                }
+                                @if (Permisos.TienePermiso("/usuarios", "ELIMINAR"))
+                                {
+                                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => EliminarUsuario(u))" Title="Eliminar" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                    }
+                </Columns>
+            </IpressDataTable>
+        </RadzenFieldSet>
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<UsuarioListDto> usuarios = new();
+    private List<RolDto> roles = new();
+    private List<DiresaDto> diresas = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        try
+        {
+            usuarios = await GestionUsuarios.GetUsuariosAsync();
+            if (roles.Count == 0)
+                roles = await GestionUsuarios.GetRolesAsync();
+            if (diresas.Count == 0)
+                diresas = await Maestros.GetDiresasAsync();
+        }
+        catch (Exception ex)
+        {
+            Notify.ShowError(ex.Message?.Contains("REFUSED", StringComparison.OrdinalIgnoreCase) == true ? "No se pudo conectar con el servidor." : "Error al cargar datos.");
+        }
+    }
+
+    private async Task AbrirNuevoUsuario()
+    {
+        var estructura = await GestionUsuarios.GetEstructuraAsync();
+        await DialogService.OpenAsync<UsuarioFormDialog>("Nuevo usuario",
+            new Dictionary<string, object?> { ["Roles"] = roles, ["Diresas"] = diresas, ["Estructura"] = estructura, ["GestionUsuarios"] = GestionUsuarios },
+            new DialogOptions { Width = "520px", Height = "85%" });
+        await Cargar();
+    }
+
+    private async Task EditarUsuario(UsuarioListDto u)
+    {
+        var edit = await GestionUsuarios.GetUsuarioAsync(u.IdUsuario);
+        if (edit == null) { Notify.ShowError("No se pudo cargar el usuario."); return; }
+        var estructura = await GestionUsuarios.GetEstructuraAsync();
+        await DialogService.OpenAsync<UsuarioFormDialog>("Editar usuario",
+            new Dictionary<string, object?> { ["Usuario"] = edit, ["Roles"] = roles, ["Diresas"] = diresas, ["Estructura"] = estructura, ["GestionUsuarios"] = GestionUsuarios },
+            new DialogOptions { Width = "560px", Height = "90%" });
+        await Cargar();
+    }
+
+    private async Task EliminarUsuario(UsuarioListDto u)
+    {
+        if (await DialogService.Confirm("¿Eliminar al usuario \"" + u.NombreCompleto + "\" (" + u.NombreUsuario + ")?", "Eliminar usuario", new ConfirmOptions { OkButtonText = "Eliminar", CancelButtonText = "Cancelar" }) != true)
+            return;
+        var (ok, msg) = await GestionUsuarios.DeleteUsuarioAsync(u.IdUsuario);
+        if (ok) { Notify.ShowSuccess("Usuario eliminado."); await Cargar(); }
+        else Notify.ShowError(msg ?? "Error al eliminar.");
+    }
+}

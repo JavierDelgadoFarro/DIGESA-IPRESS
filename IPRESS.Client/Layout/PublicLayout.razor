@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+
+<div class="public-layout">
+    <header>
+        <div class="header-inner">
+            <div class="header-brand">
+                <img src="/img/logo-digesa.png" alt="MINSA" onerror="this.style.display='none'" />
+                <div>
+                    <h1 class="header-title">IPRESS</h1>
+                    <p class="header-subtitle">Registro de Establecimientos de Salud</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        @Body
+    </main>
+
+    <footer>
+        <div class="footer-inner">
+            <p>© @DateTime.Now.Year DIGESA - Dirección General de Salud Ambiental e Inocuidad Alimentaria</p>
+        </div>
+    </footer>
+</div>

@@ -1,0 +1,22 @@
+@namespace IPRESS.Client.Components.Common
+@* Input numérico unificado: misma altura y estilo en todo el sistema. *@
+<RadzenNumeric @bind-Value="Value"
+               Min="@Min"
+               Max="@Max"
+               Style="@InputStyle"
+               Class="@InputClass"
+               Placeholder="@Placeholder"
+               Disabled="@Disabled" />
+
+@code {
+    [Parameter] public decimal? Value { get; set; }
+    [Parameter] public EventCallback<decimal?> ValueChanged { get; set; }
+    [Parameter] public decimal? Min { get; set; }
+    [Parameter] public decimal? Max { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    private string InputStyle => string.IsNullOrEmpty(Style) ? "width:100%" : "width:100%; " + Style;
+    private string InputClass => string.IsNullOrEmpty(Class) ? "ipress-input-equal" : "ipress-input-equal " + Class;
+}

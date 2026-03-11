@@ -1,41 +1,37 @@
-# DIGESA-IPRESS
+# IPRESS - Sistema de Gestión
 
-Sistema de gestión para DIGESA-IPRESS. Proyecto base limpio y escalable.
+Sistema de gestión para establecimientos de salud con maestros jerárquicos (Diresas, Red, MicroRed) y mantenimiento de establecimientos.
 
-## Arquitectura
+## Módulos
 
-- **VisitasTickets (API)**: ASP.NET Core 8 Web API con JWT
-- **VisitasTickets.Client**: Blazor WebAssembly
-- **VisitasTickets.Domain**: Entidades y DTOs
-- **VisitasTickets.Application**: Servicios de negocio (IAuthService)
-- **VisitasTickets.Infrastructure**: EF Core, DbContext
+1. **Mantenimiento de Diresas** - CRUD + importación Excel
+2. **Mantenimiento de Red** - Jerarquía sobre Diresas + importación Excel
+3. **Mantenimiento de MicroRed** - Jerarquía sobre Red + importación Excel
+4. **Mantenimiento de Establecimiento de Salud** - Con información principal, coordenadas UTM-WGS84 y centros poblados
+5. **Gestión de Usuarios** - Roles, permisos por módulo y botón
+
+## Base de datos
+
+1. Crear base de datos `IPRESS` en SQL Server
+2. Ejecutar `Scripts/IPRESS_BaseDeDatos_Completa.sql`
+3. Credenciales iniciales: **admin** / **admin**
 
 ## Configuración
 
-### IP del servidor
-Editar `VisitasTickets.Client/Globals/AppConfig.cs`:
-```csharp
-public const string ApiBaseUrl = "https://192.168.1.142:7248";
-```
-
-### Base de datos
-1. Crear base de datos `DIGESA_IPRESS`
-2. Ejecutar `Scripts/00_DIGESA_IPRESS_Completo.sql`
-3. Configurar cadena de conexión en `appsettings.json` o variables de entorno
-
-### Credenciales iniciales
-- Usuario: `admin`
-- Contraseña: `admin` (cambiar en primer acceso)
+- **Conexión:** `appsettings.json` → `ConnectionStrings:DefaultConnection`
+- **API URL (cliente):** El cliente usa la misma URL base donde se hospeda la API.
 
 ## Ejecución
 
 ```bash
-# API
-cd VisitasTickets && dotnet run
-
-# Cliente (en otra terminal)
-cd VisitasTickets.Client && dotnet run
+# API (incluye cliente Blazor hospedado)
+cd IPRESS.API && dotnet run
 ```
 
+## Formato Excel para importación
+
+Descargar el formato desde cada módulo (botón "Descargar formato") con las columnas requeridas antes de importar.
+
 ## Repositorio
+
 https://github.com/JavierDelgadoFarro/DIGESA-IPRESS
